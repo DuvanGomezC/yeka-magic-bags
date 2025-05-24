@@ -1,73 +1,43 @@
-# Welcome to your Lovable project
+# Tienda de Bolsos Artesanales
 
-## Project info
+## Descripción
 
-**URL**: https://lovable.dev/projects/4d811971-275e-4f84-8a42-d1f462cb08bd
+**Tienda de Bolsos Artesanales** es una aplicación web moderna desarrollada con React, que permite mostrar y gestionar un catálogo de bolsos hechos a mano. El objetivo principal es brindar una experiencia de navegación rápida, amigable y adaptable a cualquier dispositivo, con una interfaz limpia y profesional.
 
-## How can I edit this code?
+Este proyecto nace de la necesidad de digitalizar y dar mayor visibilidad a un emprendimiento artesanal, facilitando tanto la promoción como la venta de productos únicos.
 
-There are several ways of editing your application.
+## Características principales
 
-**Use Lovable**
+- 👜 Catálogo visual de bolsos artesanales
+- 📱 Diseño responsivo (compatible con móviles, tablets y PC)
+- 🎨 Estilo personalizado con Tailwind CSS
+- ⚙️ Interfaz desarrollada con componentes reutilizables en React
+- 🚀 Carga rápida gracias a la integración con Vite
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/4d811971-275e-4f84-8a42-d1f462cb08bd) and start prompting.
+## Tecnologías utilizadas
 
-Changes made via Lovable will be committed automatically to this repo.
+- **React** – Librería para construir interfaces de usuario.
+- **TypeScript** – Mejora la calidad del código con tipado estático.
+- **Vite** – Herramienta de desarrollo moderna y veloz.
+- **Tailwind CSS** – Framework de estilos utilitarios.
+- **shadcn/ui** – Biblioteca de componentes accesibles y personalizables.
 
-**Use your preferred IDE**
+## Público objetivo
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Este proyecto está pensado para:
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- Artesanos/as que deseen mostrar y vender sus productos en línea.
+- Emprendedores que buscan una plataforma web adaptable y moderna.
+- Usuarios interesados en productos únicos y hechos a mano.
 
-Follow these steps:
+## Objetivo del proyecto
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+Ofrecer una solución web elegante y funcional que permita a cualquier negocio artesanal mostrar su catálogo de productos, generar confianza visual y facilitar el contacto con sus clientes.
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## Créditos
 
-# Step 3: Install the necessary dependencies.
-npm i
+Desarrollado por **Duván Arcesio Gómez Cortés**  
+Frontend Developer | Apasionado por la tecnología, el diseño y los emprendimientos locales.
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+---
 
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/4d811971-275e-4f84-8a42-d1f462cb08bd) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
