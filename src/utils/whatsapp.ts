@@ -38,5 +38,5 @@ export function createWhatsAppLink(customerData: {
   
   // Create WhatsApp link with encoded message
   const encodedMessage = encodeURIComponent(message);
-  return `https://wa.me/573102746181?text=${encodedMessage}`;
+  return `https://wa.me/573156942777?text=${encodedMessage}`;
 }

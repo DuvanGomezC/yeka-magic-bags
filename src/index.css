@@ -1,3 +1,4 @@
+/* src/index.css */
 
 @tailwind base;
 @tailwind components;
@@ -5,35 +6,96 @@
 
 @layer base {
   :root {
-    --background: 40 33% 98%;
-    --foreground: 30 10% 15%;
+    /* 🌞 MODO CLARO - "Tierra Viva"
+       Inspirado en los tonos cálidos y orgánicos de la naturaleza.
+       Base suave, colores de tierra y un acento vibrante pero en armonía. */
+    --background: 40 15% 97%; /* Un crema/beige muy claro, casi blanco pero cálido */
+    --foreground: 30 20% 15%; /* Un marrón muy oscuro, casi negro, profundo */
 
-    --card: 0 0% 100%;
-    --card-foreground: 30 10% 15%;
+    --card: 0 0% 100%; /* Blanco puro para tarjetas, destacando sobre el fondo */
+    --card-foreground: 30 20% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 30 10% 15%;
+    --popover-foreground: 30 20% 15%;
 
-    --primary: 30 25% 33%;
-    --primary-foreground: 40 33% 98%;
+    --primary: 30 25% 30%; /* Marrón principal de la marca, sólido y confiable */
+    --primary-foreground: 40 33% 98%; /* Casi blanco para texto sobre primario */
 
-    --secondary: 40 20% 92%;
-    --secondary-foreground: 30 10% 15%;
+    --secondary: 40 10% 90%; /* Un gris-beige suave para elementos secundarios, que no compita */
+    --secondary-foreground: 30 15% 30%; /* Marrón medio para texto secundario */
 
-    --muted: 40 10% 90%;
-    --muted-foreground: 30 5% 40%;
+    --muted: 40 5% 85%; /* Fondo de elementos muted, muy sutil */
+    --muted-foreground: 30 10% 45%; /* Marrón cálido medio para texto muted */
 
-    --accent: 20 30% 70%;
-    --accent-foreground: 30 10% 15%;
+    --accent: 25 75% 50%; /* Terracota vibrante y auténtico. Nuestro "llamativo" */
+    --accent-foreground: 0 0% 100%; /* Blanco para texto sobre acento */
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 84.2% 60.2%; /* Rojo estándar para errores */
     --destructive-foreground: 210 40% 98%;
 
-    --border: 30 15% 80%;
-    --input: 30 15% 80%;
-    --ring: 30 25% 33%;
+    --border: 30 10% 80%; /* Borde muy suave, apenas perceptible para elementos finos */
+    --input: 30 10% 80%;
+    --ring: 30 25% 30%; /* El color del ring de enfoque, coherente con primary */
 
     --radius: 0.5rem;
+
+    /* 🎨 Colores Magia Yeka (RGB) - La identidad central, siempre disponibles */
+    --magia-brown-rgb: 130, 80, 40;     /* Más rico y profundo */
+    --magia-tan-rgb: 200, 170, 130;     /* Suave y envolvente */
+    --magia-cream-rgb: 245, 240, 225;   /* Orgánico y luminoso */
+    --magia-sage-rgb: 175, 180, 150;    /* Un verde salvia terroso y calmante */
+    --magia-terracotta-rgb: 210, 120, 85; /* Vibrante y artesanal */
+    --magia-dark-rgb: 60, 45, 30;       /* El marrón más oscuro para contraste */
+
+    /* ✅ TEXTURA SOLO PARA MODO CLARO - Sutil y orgánica */
+    --texture-bg-color: hsl(var(--background)); /* Usa el fondo del tema como base */
+    --texture-bg-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d2b48c' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    background-size: 60px 60px; /* Asegura que la textura no se estire */
+  }
+
+  .dark {
+    /* 🌙 MODO OSCURO - "Noche Bohemia"
+       Una paleta profunda y sofisticada, con toques de calidez para evitar frialdad.
+       Ideal para la vista nocturna, cómoda y elegante. */
+    --background: 220 20% 12%; /* Un gris azulado oscuro, casi antracita */
+    --foreground: 210 20% 90%; /* Un gris muy claro, suave, que simula el blanco */
+
+    --card: 220 20% 16%; /* Tarjetas un poco más claras que el fondo para distinción */
+    --card-foreground: 210 20% 90%;
+
+    --popover: 220 20% 16%;
+    --popover-foreground: 210 20% 90%;
+
+    --primary: 210 20% 80%; /* Blanco grisáceo para primario en oscuro, muy legible */
+    --primary-foreground: 220 20% 12%; /* Texto oscuro sobre primario */
+
+    --secondary: 220 15% 25%; /* Un gris medio oscuro para secundario */
+    --secondary-foreground: 210 20% 90%;
+
+    --muted: 220 10% 30%; /* Fondo de muted, más claro que el secundario */
+    --muted-foreground: 215 10% 65%; /* Gris medio para texto muted, legible */
+
+    --accent: 25 65% 45%; /* El terracota, sutilmente más tenue para no "quemar" la vista oscura */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 20% 98%;
+
+    --border: 220 15% 30%; /* Borde más definido en oscuro para separación de elementos */
+    --input: 220 15% 30%;
+    --ring: 210 20% 80%;
+
+    /* 🎨 Colores Magia Yeka para dark - Adaptados para contraste y riqueza */
+    --magia-brown-rgb: 160, 100, 50;
+    --magia-tan-rgb: 230, 200, 160;
+    --magia-cream-rgb: 250, 245, 230;
+    --magia-sage-rgb: 195, 200, 170;
+    --magia-terracotta-rgb: 220, 130, 95;
+    --magia-dark-rgb: 90, 65, 45;
+
+    /* ✅ TEXTURA DESACTIVADA EN MODO OSCURO - Para una experiencia limpia y moderna */
+    --texture-bg-color: hsl(var(--background));
+    --texture-bg-image: none; /* Sin textura en modo oscuro */
   }
 }
 
@@ -43,28 +105,70 @@
   }
 
   body {
+    /* Aplicación global de fondo y texto del tema */
     @apply bg-background text-foreground font-sans;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-serif;
+    @apply font-serif; /* Mantiene la distinción tipográfica */
   }
 }
 
-/* Custom Styles */
+/* Custom Styles - Animaciones y efectos pulidos */
+
 .texture-bg {
-  background-color: #fcfaf7;
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d2b48c' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  background-color: var(--texture-bg-color);
+  background-image: var(--texture-bg-image);
+  background-size: 60px 60px; /* Asegura el tamaño del patrón */
+  background-repeat: repeat; /* Asegura que se repita */
 }
 
+/* Animaciones de entrada refinadas */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98); /* Ligero scale para un efecto más natural */
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes zoom-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9); /* Más pequeño al inicio */
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in-up 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; /* Curva de easing más suave */
+  animation-delay: var(--animation-delay, 0s);
+  opacity: 0; /* Oculto por defecto */
+}
+
+.animate-zoom-in {
+  animation: zoom-in 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; /* Curva de easing más suave */
+  animation-delay: var(--animation-delay, 0s);
+  opacity: 0;
+}
+
+/* Efectos hover para interacción */
 .product-gallery img {
-  transition: transform 0.3s ease;
+  transition: transform 0.4s ease-in-out, box-shadow 0.4s ease-in-out; /* Transición más larga y para sombra */
 }
 
 .product-gallery img:hover {
-  transform: scale(1.05);
+  transform: scale(1.03); /* Zoom sutil */
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15); /* Sombra para profundidad */
 }
 
+/* Animación de entrada de carrito - Mantengo la existente */
 .cart-item {
   animation: fadeIn 0.3s ease-out;
 }
@@ -77,5 +181,32 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Scroll Locking - Ajuste sutil del margin-right para scrollbar */
+body[data-scroll-locked] {
+    overflow: hidden !important;
+    overscroll-behavior: contain;
+    position: relative !important;
+    padding-left: 0px;
+    padding-top: 0px;
+    padding-right: 0px;
+    margin-left: 0;
+    margin-top: 0;
+    /* Ajusta este valor si la barra de scroll de tu navegador es diferente */
+    /* Calculado para Chrome/Edge en Windows. En Mac el scrollbar es overlay, no necesitas margin. */
+    margin-right: var(--scrollbar-width, 17px) !important;
+}
+
+/* Variable para el ancho de la barra de scroll, si se quiere más control */
+:root {
+  --scrollbar-width: 17px; /* Valor por defecto para Windows */
+}
+/* Media query para MacOS / sistemas con scrollbar overlay */
+@media screen and (min-width: 1024px) { /* Asumimos que en pantallas grandes, es más probable que sea desktop */
+  body:not(.dark) { /* Solo si no es dark mode, donde no queremos textura */
+    /* Puedes detectar sistemas con scrollbar overlay usando JS si es necesario,
+       pero para una solución CSS pura, la media query es una aproximación. */
   }
 }

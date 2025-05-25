@@ -4,11 +4,11 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ThemeProvider } from "./components/theme-provider";
+// import { ThemeProvider } from "./components/theme-provider"; // <-- Asegúrate de que la ruta sea correcta
 
 // Importa tu CartProvider y el nuevo ScrollToTop
 import { CartProvider } from "./context/CartContext";
-import ScrollToTop from "./components/ScrollToTop"; // <-- Importa el nuevo componente
+import ScrollToTop from "./components/ScrollToTop";
 
 // Páginas
 import Index from "./pages/Index";
@@ -19,17 +19,21 @@ import ContactUs from "./pages/ContactUs";
 // Componente de Layout
 import Layout from "./components/Layout";
 
+// Importa ThemeProvider desde el lugar correcto
+import { ThemeProvider } from "@/components/theme-provider"; // <-- Asegúrate de esta importación
+
 const queryClient = new QueryClient();
 
 const App = () => (
-  <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+  // ThemeProvider DEBE envolver toda la aplicación para que el tema funcione globalmente
+  <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme"> {/* <-- Aquí está el ThemeProvider */}
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
         <Sonner />
         <CartProvider>
           <BrowserRouter>
-            <ScrollToTop /> {/* <-- Coloca ScrollToTop aquí, dentro del BrowserRouter */}
+            <ScrollToTop />
             <Layout>
               <Routes>
                 <Route path="/" element={<Index />} />
