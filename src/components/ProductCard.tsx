@@ -132,7 +132,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
               <Button
                 onClick={() => addToCart(product)}
-                className="flex items-center gap-2"
+                className="buy-button-dialog flex items-center gap-2 min-w-[100px] px-3 py-2 bg-green-600 text-white border-green-600 hover:bg-green-700 hover:border-green-700 active:bg-green-800 active:border-green-800 transition-colors duration-200"
               >
                 <ShoppingBag className="h-4 w-4" />
                 <span>Añadir al carrito</span>
@@ -156,11 +156,10 @@ export default function ProductCard({ product }: ProductCardProps) {
           <Button
             onClick={() => addToCart(product)}
             size="sm"
-            variant="outline"
-            className="flex items-center space-x-1"
+            className="buy-button flex items-center gap-2 min-w-[100px] px-3 py-2 bg-green-600 text-white border-green-600 hover:bg-green-700 hover:border-green-700 active:bg-green-800 active:border-green-800 transition-colors duration-200"
           >
-            <ShoppingBag className="h-4 w-4" />
-            <span className="sr-only sm:not-sr-only sm:inline">Comprar</span>
+            <ShoppingBag className="h-4 w-4 flex-shrink-0" />
+            <span className="whitespace-nowrap">Añadir al carrito</span>
           </Button>
         </div>
       </div>

@@ -184,6 +184,44 @@
   }
 }
 
+/* Estilos para el botón de compra verde dinero */
+.buy-button {
+  background-color: #16a34a !important;
+  border-color: #16a34a !important;
+  color: white !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+
+.buy-button:hover {
+  background-color: #15803d !important;
+  border-color: #15803d !important;
+  color: white !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(22, 163, 74, 0.3);
+}
+
+.buy-button:active,
+.buy-button:focus {
+  background-color: #166534 !important;
+  border-color: #166534 !important;
+  color: white !important;
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(22, 163, 74, 0.2);
+}
+
+/* Asegurar que el botón mantenga sus dimensiones en responsive */
+.buy-button {
+  min-width: 100px;
+  white-space: nowrap;
+}
+
+/* Efecto adicional para el ícono dentro del botón */
+.buy-button:hover svg {
+  transform: scale(1.1);
+  transition: transform 0.2s ease-in-out;
+}
+
 /* Scroll Locking - Ajuste sutil del margin-right para scrollbar */
 body[data-scroll-locked] {
     overflow: hidden !important;

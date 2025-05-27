@@ -17,18 +17,7 @@ export default function Hero() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <div className="space-y-7 z-10"> {/* Espaciado consistente */}
             {/* Tag de diseño artesanal: Más acentuado y con un sutil degradado de texto */}
-            <div
-              className="bg-accent/15 text-accent font-semibold rounded-full px-5 py-1.5 text-sm inline-flex items-center gap-1 animate-fade-in
-                         bg-gradient-to-r from-accent/20 to-transparent pr-8"
-              style={{ '--animation-delay': '0.15s' } as React.CSSProperties}
-            >
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-accent to-magia-terracotta">
-                Diseño artesanal
-              </span>
-              <ArrowRight className="h-4 w-4 text-accent" />
-            </div>
-
-            {/* Título principal: Mayor impacto visual y el acento estratégico */}
+                      {/* Título principal: Mayor impacto visual y el acento estratégico */}
             <h1
               className="text-5xl md:text-6xl lg:text-7xl font-serif font-extrabold leading-tight tracking-tighter animate-fade-in drop-shadow-sm"
               style={{ '--animation-delay': '0.3s' } as React.CSSProperties}
