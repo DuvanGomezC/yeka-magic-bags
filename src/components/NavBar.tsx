@@ -79,7 +79,7 @@ export default function NavBar() {
             to="/contact"
             className="text-magia-dark hover:text-magia-terracotta transition-colors font-medium dark:text-gray-300 dark:hover:text-magia-terracotta"
           >
-            Contacto
+            Contactanos
           </Link>
         </nav>
 
@@ -146,7 +146,7 @@ export default function NavBar() {
                   Productos
                 </a>
                 <Link to="/about" className="hover:text-magia-terracotta">Nosotros</Link>
-                <Link to="/contact" className="hover:text-magia-terracotta">Contacto</Link>
+                <Link to="/contact" className="hover:text-magia-terracotta">Contactanos</Link>
               </nav>
             </SheetContent>
           </Sheet>
