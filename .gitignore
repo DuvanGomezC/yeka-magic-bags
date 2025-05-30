@@ -7,7 +7,7 @@
 /backend/.env
 
 # Archivos de build/compilación de Vite
-/dist1
+/dist
 /.vite
 
 # Caché de npm, yarn, bun (si los usas)
