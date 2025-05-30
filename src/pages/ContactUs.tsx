@@ -3,7 +3,8 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import axios from 'axios';
+// *** CAMBIO AQUI: Importa tu instancia configurada de axios ***
+import api from '../utils/axiosInstance'; // Asegúrate de que la ruta relativa sea correcta
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -41,10 +42,9 @@ const ContactUs: React.FC = () => {
 
   const onSubmit = async (data: ContactFormValues) => {
     try {
-      // *** CAMBIO CLAVE AQUÍ: Usamos VITE_BACKEND_URL para coincidir con la configuración de Render ***
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-      // La ruta específica para el contacto es /api/contact según tu backend/src/app.js
-      const response = await axios.post(`${backendUrl}/api/contact`, data);
+      // *** CAMBIO CLAVE AQUÍ: Usa 'api' (tu instancia configurada) y la ruta relativa ***
+      // La baseURL ya está configurada en axiosInstance.ts con VITE_BACKEND_API_URL.
+      const response = await api.post('/api/contact', data);
 
       if (response.status === 200) {
         toast({

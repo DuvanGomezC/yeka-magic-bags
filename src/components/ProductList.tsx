@@ -14,7 +14,8 @@ import { Search } from "lucide-react";
 
 // Importaciones para fetching de datos
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
+// *** CAMBIO AQUI: Importa tu instancia configurada de axios ***
+import api from '../utils/axiosInstance'; // Asegúrate de que la ruta relativa sea correcta (desde components a utils)
 import { Product } from "@/types/product";
 
 export default function ProductList() {
@@ -27,7 +28,9 @@ export default function ProductList() {
 
   // Fetching de productos desde el backend con React Query
   const fetchProducts = async (): Promise<Product[]> => {
-    const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/products`);
+    // *** CAMBIO CLAVE AQUÍ: Usa 'api' (tu instancia configurada) y la ruta relativa ***
+    // La baseURL ya está configurada en axiosInstance.ts con VITE_BACKEND_API_URL.
+    const response = await api.get('/api/products');
     return response.data;
   };
 
@@ -179,7 +182,7 @@ export default function ProductList() {
                 className="w-full sm:w-[300px] pl-9"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-              />
+                />
             </div>
           </div>
         </div>

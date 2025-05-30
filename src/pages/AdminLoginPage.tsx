@@ -1,7 +1,8 @@
 // src/pages/AdminLoginPage.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+// *** CAMBIO AQUI: Importa tu instancia configurada de axios ***
+import api from '../utils/axiosInstance'; // Asegúrate de que la ruta relativa sea correcta
 import { useToast } from "@/components/ui/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -21,9 +22,9 @@ const AdminLoginPage: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      // *** CAMBIO CLAVE AQUÍ: Usamos VITE_BACKEND_URL en lugar de la URL hardcodeada ***
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-      const response = await axios.post(`${backendUrl}/api/auth/login`, { email, password });
+      // *** CAMBIO CLAVE AQUI: Usa 'api' (tu instancia configurada) y la ruta relativa ***
+      // La baseURL ya está configurada en axiosInstance.ts, así que solo necesitas la ruta de la API
+      const response = await api.post('/api/auth/login', { email, password });
 
       const { token } = response.data;
       login(token); // Guardar el token en el contexto y localStorage

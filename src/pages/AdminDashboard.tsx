@@ -1,6 +1,7 @@
 // src/pages/AdminDashboard.tsx
 import React, { useState, useEffect, useMemo } from 'react';
-import axios from 'axios';
+// *** CAMBIO AQUI: Importa tu instancia configurada de axios ***
+import api from '../utils/axiosInstance'; // Asegúrate de que la ruta relativa sea correcta (desde pages a utils)
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,8 +48,8 @@ const AdminDashboard: React.FC = () => {
   // Nuevo estado para el término de búsqueda
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Asegúrate de que esta URL coincida con la de tu backend
-  const API_BASE_URL = import.meta.env.VITE_BACKEND_URL ? `${import.meta.env.VITE_BACKEND_URL}/api/products` : 'http://localhost:3001/api/products';
+  // *** CAMBIO AQUI: ELIMINAR API_BASE_URL, ya no es necesario ***
+  // La URL base del backend ya está configurada en `axiosInstance.ts`
 
   useEffect(() => {
     fetchProducts();
@@ -57,7 +58,8 @@ const AdminDashboard: React.FC = () => {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(API_BASE_URL);
+      // *** CAMBIO CLAVE AQUÍ: Usar 'api' y la ruta relativa ***
+      const response = await api.get('/api/products');
       setProducts(response.data);
     } catch (error: any) {
       console.error('Error al cargar productos:', error.response?.data || error.message);
@@ -122,14 +124,16 @@ const AdminDashboard: React.FC = () => {
 
     try {
       if (editingProduct) {
-        await axios.put(`${API_BASE_URL}/${editingProduct.id}`, formData, {
+        // *** CAMBIO CLAVE AQUÍ: Usar 'api' y la ruta relativa ***
+        await api.put(`/api/products/${editingProduct.id}`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
         });
         toast({ title: "Producto Actualizado", description: "El producto ha sido actualizado exitosamente." });
       } else {
-        await axios.post(API_BASE_URL, formData, {
+        // *** CAMBIO CLAVE AQUÍ: Usar 'api' y la ruta relativa ***
+        await api.post('/api/products', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
@@ -157,7 +161,8 @@ const AdminDashboard: React.FC = () => {
     }
     setLoading(true);
     try {
-      await axios.delete(`${API_BASE_URL}/${id}`);
+      // *** CAMBIO CLAVE AQUÍ: Usar 'api' y la ruta relativa ***
+      await api.delete(`/api/products/${id}`);
       toast({ title: "Producto Eliminado", description: "El producto ha sido eliminado exitosamente." });
       fetchProducts();
     } catch (error: any) {
