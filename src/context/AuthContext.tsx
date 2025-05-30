@@ -1,6 +1,7 @@
 // src/context/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import axios from 'axios';
+// Ya no necesitamos importar axios aquí directamente para los interceptores globales
+// import axios from 'axios'; 
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -16,8 +17,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoading, setIsLoading] = useState<boolean>(true); // Para manejar la carga inicial
 
   useEffect(() => {
-    // Verificar el token al cargar la aplicación desde sessionStorage
-    const token = sessionStorage.getItem('adminToken'); // CAMBIO: de localStorage a sessionStorage
+    // Verificar el token al cargar la aplicación desde localStorage con la clave 'token'
+    const token = localStorage.getItem('token'); // <- CAMBIO: Usa localStorage y clave 'token'
     if (token) {
       // Opcional: Podrías hacer una petición al backend para validar el token si es necesario
       // Por simplicidad, asumimos que si el token existe, estamos autenticados (hasta que falle una petición)
@@ -27,12 +28,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const login = (token: string) => {
-    sessionStorage.setItem('adminToken', token); // CAMBIO: de localStorage a sessionStorage
+    localStorage.setItem('token', token); // <- CAMBIO: Usa localStorage y clave 'token'
     setIsAuthenticated(true);
   };
 
   const logout = () => {
-    sessionStorage.removeItem('adminToken'); // CAMBIO: de localStorage a sessionStorage
+    localStorage.removeItem('token'); // <- CAMBIO: Usa localStorage y clave 'token'
     setIsAuthenticated(false);
   };
 
@@ -50,36 +51,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-// Configurar Axios para incluir el token en cada solicitud
-axios.interceptors.request.use(
-  (config) => {
-    const token = sessionStorage.getItem('adminToken'); // CAMBIO: de localStorage a sessionStorage
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Manejar errores de token expirado o inválido
-axios.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-      const originalRequest = error.config;
-      // Evitar bucle infinito si la solicitud ya era para /api/auth/login
-      if (originalRequest.url && !originalRequest.url.includes('/api/auth/login')) {
-        sessionStorage.removeItem('adminToken'); // CAMBIO: de localStorage a sessionStorage
-        // Esto puede no funcionar directamente para redirigir fuera de un componente de React.
-        // Se puede mejorar con un callback o un manejador de estado global.
-        // Por ahora, simplemente limpiamos el token. La redirección la hará ProtectedRoute.
-        window.location.href = '/admin-login'; // Redirigir al login
-      }
-    }
-    return Promise.reject(error);
-  }
-);
