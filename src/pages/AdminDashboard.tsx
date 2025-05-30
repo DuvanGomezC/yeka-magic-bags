@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, UploadCloud } from "lucide-react"; // <-- Importar UploadCloud
+import { Search, UploadCloud } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -43,6 +43,7 @@ const AdminDashboard: React.FC = () => {
   const { toast } = useToast();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [isDragOver, setIsDragOver] = useState(false); // <-- NUEVO ESTADO para el efecto de drag-over
 
   useEffect(() => {
     fetchProducts();
@@ -80,30 +81,35 @@ const AdminDashboard: React.FC = () => {
     }));
   };
 
-  // --- MODIFICACIÓN CLAVE: Permitir añadir múltiples conjuntos de nuevas imágenes ---
+  // --- FUNCIÓN REFACTORIZADA: Añade archivos a la lista, ya sea por input o drag-drop ---
+  const handleFilesAddition = (filesToAdd: FileList | File[]) => {
+    const newFiles = Array.from(filesToAdd); // Asegura que sea un array
+
+    setProductForm((prevData) => {
+      const existingNewFiles = prevData.images;
+
+      // Combinar imágenes existentes con las nuevas, filtrando duplicados por nombre y tamaño
+      const combinedFiles = [...existingNewFiles];
+      newFiles.forEach(newFile => {
+        const isDuplicate = combinedFiles.some(
+          existingFile => existingFile.name === newFile.name && existingFile.size === newFile.size
+        );
+        if (!isDuplicate) {
+          combinedFiles.push(newFile);
+        }
+      });
+
+      return {
+        ...prevData,
+        images: combinedFiles,
+      };
+    });
+  };
+
+  // Manejador para el input de archivo (clic)
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-
-      setProductForm((prevData) => {
-        const existingNewFiles = prevData.images;
-
-        // Combinar imágenes existentes con las nuevas, filtrando duplicados por nombre y tamaño
-        const combinedFiles = [...existingNewFiles];
-        newFiles.forEach(newFile => {
-          const isDuplicate = combinedFiles.some(
-            existingFile => existingFile.name === newFile.name && existingFile.size === newFile.size
-          );
-          if (!isDuplicate) {
-            combinedFiles.push(newFile);
-          }
-        });
-
-        return {
-          ...prevData,
-          images: combinedFiles,
-        };
-      });
+      handleFilesAddition(e.target.files);
       // Importante: Limpiar el valor del input de archivo para que el mismo archivo pueda ser seleccionado de nuevo
       e.target.value = '';
     }
@@ -211,7 +217,7 @@ const AdminDashboard: React.FC = () => {
       category: product.category,
       featured: product.featured,
       active: product.active,
-      images: [],
+      images: [], // No precargamos nuevas imágenes en el formulario de edición, solo existentes
       existingImageUrls: product.images || [],
     });
     setIsDialogOpen(true);
@@ -394,13 +400,37 @@ const AdminDashboard: React.FC = () => {
                 </div>
               </div>
             )}
-            {/* Subida de Nuevas Imágenes - MODIFICACIÓN DE APARIENCIA */}
+            {/* Subida de Nuevas Imágenes con Drag and Drop */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="images" className="text-right">Nuevas Imágenes</Label>
               <div className="col-span-3">
                 <label
                   htmlFor="images"
-                  className="flex flex-col items-center justify-center w-full p-4 border-2 border-dashed rounded-md cursor-pointer bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
+                  className={`flex flex-col items-center justify-center w-full p-4 border-2 rounded-md cursor-pointer transition-colors
+                    ${isDragOver // <-- Clases condicionales para el efecto de arrastre
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900'
+                      : 'border-dashed border-gray-300 bg-gray-100 hover:bg-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:hover:bg-gray-600'
+                    }`}
+                  onDragOver={(e) => { // <-- Manejador para cuando un elemento es arrastrado sobre la zona
+                    e.preventDefault(); // Necesario para permitir el 'drop'
+                    e.stopPropagation();
+                    setIsDragOver(true); // Activa el estado de arrastre
+                    e.dataTransfer.dropEffect = 'copy'; // Indica que se copiará el elemento
+                  }}
+                  onDragLeave={(e) => { // <-- Manejador para cuando el elemento arrastrado sale de la zona
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsDragOver(false); // Desactiva el estado de arrastre
+                  }}
+                  onDrop={(e) => { // <-- Manejador para cuando un elemento es soltado en la zona
+                    e.preventDefault(); // Previene el comportamiento por defecto (ej. abrir el archivo en el navegador)
+                    e.stopPropagation();
+                    setIsDragOver(false); // Desactiva el estado de arrastre
+
+                    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                      handleFilesAddition(e.dataTransfer.files); // Usa la función común para añadir los archivos
+                    }
+                  }}
                 >
                   <UploadCloud className="w-8 h-8 text-muted-foreground mb-2" />
                   <p className="text-sm text-muted-foreground text-center">
@@ -412,8 +442,8 @@ const AdminDashboard: React.FC = () => {
                     type="file"
                     multiple
                     onChange={handleFileChange}
-                    className="hidden" // Oculta el input de archivo predeterminado
-                    accept="image/*" // Limita la selección a tipos de imagen
+                    className="hidden"
+                    accept="image/*"
                   />
                 </label>
               </div>
