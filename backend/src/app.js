@@ -15,64 +15,169 @@ const contactRoutes = require('./routes/contactRoutes'); // <--- NUEVA: Importa 
 const app = express();
 const PORT = process.env.PORT || 3001; // Puerto del servidor backend para desarrollo local
 
-// Leer los orígenes permitidos desde las variables de entorno
-// Separa por comas si hay múltiples orígenes (ej. 'http://localhost:5173,https://tu-frontend.vercel.app')
-const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:5173']; // Agrega el valor por defecto si no está en .env para desarrollo
-
-// Middlewares
-app.use(cors({
+// CONFIGURACIÓN CORS MEJORADA PARA RENDER
+const corsOptions = {
     origin: function (origin, callback) {
-        // Permitir solicitudes sin origen (como de herramientas como Postman o curl)
-        // O si el origen es la misma aplicación en Vercel, o si está en la lista de permitidos
-        if (!origin || allowedOrigins.includes(origin)) {
+        // Lista de orígenes permitidos (actualizada para Render)
+        const allowedOrigins = [
+            'https://yeka-magic-bags-frontend.onrender.com',
+            'https://yeka-magic-bags.netlify.app',
+            'http://localhost:5173',
+            'http://localhost:3000',
+            'http://localhost:4173'
+        ];
+
+        // Agregar orígenes desde variables de entorno si existen
+        if (process.env.ALLOWED_ORIGINS) {
+            const envOrigins = process.env.ALLOWED_ORIGINS.split(',');
+            allowedOrigins.push(...envOrigins);
+        }
+
+        // Permitir solicitudes sin origen (Postman, curl, etc.)
+        if (!origin) {
             return callback(null, true);
         }
 
-        // Para entornos de desarrollo (ej. local)
-        if (process.env.NODE_ENV !== 'production') {
-            return callback(null, true); // Permite cualquier origen en desarrollo
+        // Verificar si el origen está en la lista permitida
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
         }
 
+        // Para entornos de desarrollo, ser más permisivo
+        if (process.env.NODE_ENV !== 'production') {
+            return callback(null, true);
+        }
+
+        // En producción, rechazar orígenes no permitidos
         const msg = `La política CORS para este sitio no permite el acceso desde el origen especificado ${origin}.`;
         return callback(new Error(msg), false);
     },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], // Asegúrate de incluir PATCH si lo usas, como en AdminDashboard para actualizar
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
-app.use(express.json()); // Para parsear JSON en el cuerpo de las solicitudes
-app.use(express.urlencoded({ extended: true })); // Para parsear datos de formularios URL-encoded (si los necesitas, aunque para JSON no es estrictamente necesario)
+    credentials: true, // Permitir cookies y credenciales
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], // Incluir OPTIONS para preflight
+    allowedHeaders: [
+        'Origin',
+        'X-Requested-With',
+        'Content-Type',
+        'Accept',
+        'Authorization',
+        'Cache-Control'
+    ],
+    optionsSuccessStatus: 200 // Para compatibilidad con navegadores legacy
+};
 
-// Rutas
+// Aplicar CORS
+app.use(cors(corsOptions));
+
+// Middleware adicional para headers CORS (por si acaso)
+app.use((req, res, next) => {
+    // Obtener el origen de la solicitud
+    const origin = req.headers.origin;
+    
+    // Si el origen está permitido, agregarlo al header
+    const allowedOrigins = [
+        'https://yeka-magic-bags-frontend.onrender.com',
+        'http://localhost:5173',
+        'http://localhost:3000',
+        'http://localhost:4173'
+    ];
+    
+    if (allowedOrigins.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+    
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS,PATCH');
+    res.setHeader('Access-Control-Allow-Headers', 'Origin,X-Requested-With,Content-Type,Accept,Authorization,Cache-Control');
+    
+    // Responder a solicitudes preflight OPTIONS
+    if (req.method === 'OPTIONS') {
+        res.sendStatus(200);
+    } else {
+        next();
+    }
+});
+
+// Middlewares para parsing
+app.use(express.json({ limit: '10mb' })); // Para parsear JSON en el cuerpo de las solicitudes
+app.use(express.urlencoded({ extended: true, limit: '10mb' })); // Para parsear datos de formularios URL-encoded
+
+// RUTAS
 app.use('/api/auth', authRoutes); // Rutas de autenticación
 app.use('/api/products', productRoutes); // Rutas de productos
-app.use('/api/contact', contactRoutes); // <-- Rutas para el formulario de contacto
+app.use('/api/contact', contactRoutes); // Rutas para el formulario de contacto
 
-// Ruta de prueba (si accedes a la API base)
-app.get('/api', (req, res) => {
-    res.send('Backend de Yeka Magic Bags funcionando!');
-});
-
-// Ruta raíz (para cuando accedes al puerto del backend directamente en desarrollo)
-app.get('/', (req, res) => {
-    res.send('Backend de Yeka Magic Bags funcionando!');
-});
-
-
-// Manejo de errores global
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    // Puedes personalizar la respuesta de error según el tipo de error
-    res.status(err.status || 500).send({
-        error: err.message || 'Algo salió mal en el servidor!',
-        details: process.env.NODE_ENV === 'development' ? err.stack : undefined // Muestra el stack solo en desarrollo
+// Ruta de prueba para verificar conectividad
+app.get('/api/test', (req, res) => {
+    res.json({
+        message: 'Backend de Yeka Magic Bags funcionando correctamente!',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development',
+        port: PORT
     });
 });
 
-// Iniciar el servidor (Solo para desarrollo local. Vercel ignora esta parte para funciones serverless)
-app.listen(PORT, () => {
-    console.log(`Servidor backend corriendo en http://localhost:${PORT}`);
+// Ruta de prueba (si accedes a la API base)
+app.get('/api', (req, res) => {
+    res.json({
+        message: 'Backend de Yeka Magic Bags funcionando!',
+        availableEndpoints: [
+            '/api/auth',
+            '/api/products', 
+            '/api/contact',
+            '/api/test'
+        ]
+    });
 });
 
+// Ruta raíz (para cuando accedes al puerto del backend directamente)
+app.get('/', (req, res) => {
+    res.json({
+        message: 'Yeka Magic Bags API',
+        status: 'Online',
+        version: '1.0.0'
+    });
+});
+
+// Manejo de errores CORS específico
+app.use((err, req, res, next) => {
+    if (err.message && err.message.includes('CORS')) {
+        return res.status(403).json({
+            error: 'CORS Error',
+            message: 'No tienes permisos para acceder desde este origen',
+            origin: req.headers.origin
+        });
+    }
+    next(err);
+});
+
+// Manejo de errores global
+app.use((err, req, res, next) => {
+    console.error('Error:', err.message);
+    console.error('Stack:', err.stack);
+    
+    res.status(err.status || 500).json({
+        error: err.message || 'Algo salió mal en el servidor!',
+        details: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+});
+
+// Manejo de rutas no encontradas
+app.use('*', (req, res) => {
+    res.status(404).json({
+        error: 'Ruta no encontrada',
+        path: req.originalUrl,
+        method: req.method
+    });
+});
+
+// Iniciar el servidor (Solo para desarrollo local. Render/Vercel manejan esto automáticamente)
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Servidor backend corriendo en puerto ${PORT}`);
+        console.log(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
+    });
+}
+
 // Exportar la instancia de la aplicación Express
-// ¡Esto es CRÍTICO para que Vercel pueda usar tu aplicación como una función serverless!
+// ¡Esto es CRÍTICO para que Render/Vercel puedan usar tu aplicación!
 module.exports = app;
