@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: yeka-magic-bags-frontend
+    env: static
+    buildCommand: rm -rf node_modules package-lock.json && npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: NODE_VERSION
+        value: 18
