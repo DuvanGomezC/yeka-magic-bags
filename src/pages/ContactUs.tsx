@@ -1,15 +1,14 @@
-// src/pages/ContactUs.tsx
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import axios from 'axios'; // ¡Importa axios!
+import axios from 'axios'; // Asegúrate de tener axios instalado 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/components/ui/use-toast'; // Asegúrate de que useToast esté correctamente implementado
 
 // Define el esquema de validación con Zod
 const contactFormSchema = z.object({
@@ -27,7 +26,7 @@ const ContactUs: React.FC = () => {
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting }, // isSubmitting para deshabilitar el botón mientras se envía
+    formState: { errors, isSubmitting },
     reset,
   } = useForm<ContactFormValues>({
     resolver: zodResolver(contactFormSchema),
@@ -41,31 +40,30 @@ const ContactUs: React.FC = () => {
 
   const onSubmit = async (data: ContactFormValues) => {
     try {
-      // *** CAMBIO CLAVE AQUÍ PARA PRUEBAS LOCALES ***
-      // Apunta directamente a la URL de tu backend para desarrollo local
-      const response = await axios.post('/api/contact', data);
-      // CUANDO ESTÉS LISTO PARA DESPLEGAR EN VERCEL, CAMBIA LA LÍNEA ANTERIOR A:
-      // const response = await axios.post('/api/contact', data);
+      // *** CAMBIO CLAVE AQUÍ PARA PRODUCCIÓN EN RENDER ***
+      // En Render, VITE_BACKEND_API_URL se configurará como la URL pública de tu backend.
+      // En desarrollo local, usará 'http://localhost:3001'.
+      const backendUrl = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3001';
+      // La ruta específica para el contacto es /api/contact según tu backend/src/app.js
+      const response = await axios.post(`${backendUrl}/api/contact`, data);
 
-
-      if (response.status === 200) { // Comprueba el estado HTTP
+      if (response.status === 200) {
         toast({
           title: 'Mensaje enviado!',
           description: 'Gracias por contactarnos. Te responderemos pronto.',
           variant: 'default',
         });
-        reset(); // Resetea el formulario solo si el envío fue exitoso
+        reset(); // Limpia el formulario después del envío exitoso
       } else {
-        // Axios lanza un error para estados 4xx/5xx, así que esta rama solo se alcanzaría con otros códigos de estado
+        // En caso de que el backend responda con un estado diferente de 200 pero sin lanzar error
         console.error('Error al enviar el formulario al backend:', response.data);
         toast({
           title: 'Error al enviar el mensaje.',
-          description: 'Hubo un problema. Por favor, inténtalo de nuevo más tarde.',
+          description: response.data.error || 'Hubo un problema. Por favor, inténtalo de nuevo más tarde.',
           variant: 'destructive',
         });
       }
     } catch (error) {
-      // Manejo de errores de Axios (ej. red, o respuesta de error del servidor)
       console.error('Error de red o del servidor al enviar el formulario:', error);
       toast({
         title: 'Error de conexión o del servidor.',

@@ -7,14 +7,16 @@
   ],
   "builds": [
     {
-      "src": "package.json",
+      "src": "frontend/package.json", 
       "use": "@vercel/static-build",
       "config": {
-        "outputDirectory": "dist"
+        "outputDirectory": "dist",
+        "installCommand": "npm install --prefix frontend", 
+        "buildCommand": "npm run build --prefix frontend" 
       }
     },
     {
-      "src": "api/index.js",
+      "src": "backend/src/api/index.js", 
       "use": "@vercel/node",
       "config": {
         "includeFiles": [
