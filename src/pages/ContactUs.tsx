@@ -3,7 +3,7 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-// *** CAMBIO AQUI: Importa tu instancia configurada de axios ***
+// *** Importa tu instancia configurada de axios ***
 import api from '../utils/axiosInstance'; // Asegúrate de que la ruta relativa sea correcta
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,8 +42,7 @@ const ContactUs: React.FC = () => {
 
   const onSubmit = async (data: ContactFormValues) => {
     try {
-      // *** CAMBIO CLAVE AQUÍ: Usa 'api' (tu instancia configurada) y la ruta relativa ***
-      // La baseURL ya está configurada en axiosInstance.ts con VITE_BACKEND_API_URL.
+      // *** Uso de 'api' (tu instancia configurada) y la ruta relativa ***
       const response = await api.post('/api/contact', data);
 
       if (response.status === 200) {
@@ -54,10 +53,12 @@ const ContactUs: React.FC = () => {
         });
         reset(); // Limpia el formulario después del envío exitoso
       } else {
-        console.error('Error al enviar el formulario al backend:', response.data);
+        // Manejo de errores basado en la respuesta del backend
+        const errorData = response.data || {}; // Asegura que errorData no sea undefined
+        console.error('Error al enviar el formulario al backend:', errorData);
         toast({
           title: 'Error al enviar el mensaje.',
-          description: response.data.error || 'Hubo un problema. Por favor, inténtalo de nuevo más tarde.',
+          description: errorData.error || 'Hubo un problema. Por favor, inténtalo de nuevo más tarde.',
           variant: 'destructive',
         });
       }
@@ -65,7 +66,7 @@ const ContactUs: React.FC = () => {
       console.error('Error de red o del servidor al enviar el formulario:', error);
       toast({
         title: 'Error de conexión o del servidor.',
-        description: 'No se pudo conectar con el servidor o hubo un problema. Verifica que tu backend esté corriendo y la URL sea correcta.',
+        description: 'No se pudo conectar con el servidor o hubo un problema. Verifica tu conexión a internet o el estado del backend.',
         variant: 'destructive',
       });
     }
@@ -110,9 +111,23 @@ const ContactUs: React.FC = () => {
           <div className="mt-8 text-center text-gray-600">
             <p>También puedes encontrarnos en:</p>
             <p className="mt-2">
-              <strong className="block">Teléfono:</strong> +57 (315) 694-2777
-              <strong className="block">Email:</strong> info@yekamagicbags.com
-              <strong className="block">Dirección:</strong> Calle Ficticia 123, Ciudad Mágica, País Imaginario
+              <strong className="block">Teléfono:</strong>
+              {/* Enlace para llamar por teléfono */}
+              <a
+                href="tel:+573156942777" // Formato internacional, sin espacios ni paréntesis
+                className="text-magia-brown hover:underline dark:text-gray-300" // Añade estilos para que parezca un enlace
+              >
+                +57 (315) 694-2777
+              </a>
+              <strong className="block mt-2">Email:</strong>
+              {/* Enlace para enviar correo electrónico */}
+              <a
+                href="mailto:info@yekamagicbags.com"
+                className="text-magia-brown hover:underline dark:text-gray-300" // Añade estilos para que parezca un enlace
+              >
+                info@yekamagicbags.com
+              </a>
+              <strong className="block mt-2">Dirección:</strong> Calle Ficticia 123, Ciudad Mágica, País Imaginario
             </p>
           </div>
         </CardContent>
