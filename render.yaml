@@ -10,7 +10,10 @@ services:
     env: static
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /yeka-magic-bags-frontend.onrender.com
+    envVars: # <-- Asegúrate de que esta sección esté presente si tienes variables de entorno
+      - key: NODE_VERSION
+        value: 18
+    # --- ¡ESTA ES LA SECCIÓN CLAVE PARA EL REWRITES! ---
+    rewrites: # <-- Asegúrate de que 'rewrites' esté al mismo nivel que 'staticPublishPath', 'envVars', etc.
+      - source: /*
+        destination: /index.html

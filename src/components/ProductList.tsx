@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+// src/components/ProductList.tsx
+import React, { useEffect, useState, useRef } from "react"; // <--- Añadir 'useRef' aquí
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,8 +15,7 @@ import { Search } from "lucide-react";
 
 // Importaciones para fetching de datos
 import { useQuery } from "@tanstack/react-query";
-// *** CAMBIO AQUI: Importa tu instancia configurada de axios ***
-import api from '../utils/axiosInstance'; // Asegúrate de que la ruta relativa sea correcta (desde components a utils)
+import api from '../utils/axiosInstance';
 import { Product } from "@/types/product";
 
 export default function ProductList() {
@@ -23,179 +23,145 @@ export default function ProductList() {
   const [searchQuery, setSearchQuery] = useState("");
 
   // --- Lógica de Paginación ---
-  const PRODUCTS_PER_PAGE = 8; // CAMBIO: Ahora 8 productos por página
-  const [currentPage, setCurrentPage] = useState(1); // Estado para la página actual
+  const PRODUCTS_PER_PAGE = 8;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // --- MODIFICACIÓN DEL SCROLL: Crear una ref para la parte superior de la sección de productos ---
+  const productListRef = useRef<HTMLDivElement>(null);
 
   // Fetching de productos desde el backend con React Query
   const fetchProducts = async (): Promise<Product[]> => {
-    // *** CAMBIO CLAVE AQUÍ: Usa 'api' (tu instancia configurada) y la ruta relativa ***
-    // La baseURL ya está configurada en axiosInstance.ts con VITE_BACKEND_API_URL.
     const response = await api.get('/api/products');
     return response.data;
   };
 
-  const { data: products, isLoading, isError, error } = useQuery<Product[], Error>({
+  const {
+    data: allProducts,
+    isLoading,
+    isError,
+    error,
+  } = useQuery<Product[], Error>({
     queryKey: ['products'],
     queryFn: fetchProducts,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
-  // Filtrado y búsqueda local
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  // Filtrado de productos
+  const filteredProducts = React.useMemo(() => {
+    if (!allProducts) return [];
+    return allProducts.filter((product) => {
+      const matchesCategory =
+        selectedCategory === "todos" || product.category === selectedCategory;
+      const matchesSearch = product.name
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [allProducts, selectedCategory, searchQuery]);
 
-  useEffect(() => {
-    if (isLoading || isError || !products) {
-      setFilteredProducts([]);
-      return;
-    }
-
-    // Filtra solo los productos activos
-    let result = products.filter(product => product.active);
-
-    // Aplicar filtro por categoría
-    if (selectedCategory !== "todos") {
-      result = result.filter((product) => product.category === selectedCategory);
-    }
-
-    // Aplicar filtro de búsqueda
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter((product) =>
-        product.name.toLowerCase().includes(query) ||
-        (product.description && product.description.toLowerCase().includes(query))
-      );
-    }
-
-    setFilteredProducts(result);
-    // Reiniciar la página actual a 1 cada vez que los filtros cambian
-    setCurrentPage(1);
-  }, [selectedCategory, searchQuery, products, isLoading, isError]);
-
-  // --- NUEVA LÓGICA: Scroll al inicio de la sección de productos al cambiar de página ---
-  useEffect(() => {
-    const productsSection = document.getElementById('productos');
-    if (productsSection) {
-      productsSection.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [currentPage]); // Este efecto se ejecuta cada vez que currentPage cambia
-
-  // Obtener categorías únicas de los productos activos
-  const categories = ["todos", ...Array.from(new Set(products?.filter(p => p.active).map(p => p.category) || []))];
-
-  // Calcular productos para mostrar en la página actual
+  // Lógica de paginación
   const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
-  const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
-  const endIndex = startIndex + PRODUCTS_PER_PAGE;
-  const productsToDisplay = filteredProducts.slice(startIndex, endIndex);
-
-  // Manejadores de paginación
-  const goToNextPage = () => {
-    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
-  };
-
-  const goToPrevPage = () => {
-    setCurrentPage((prev) => Math.max(prev - 1, 1));
-  };
+  const paginatedProducts = React.useMemo(() => {
+    const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
+    const endIndex = startIndex + PRODUCTS_PER_PAGE;
+    return filteredProducts.slice(startIndex, endIndex);
+  }, [filteredProducts, currentPage, PRODUCTS_PER_PAGE]);
 
   const goToPage = (pageNumber: number) => {
     setCurrentPage(pageNumber);
   };
 
-  // Estado de carga
+  const goToPrevPage = () => {
+    setCurrentPage((prev) => Math.max(1, prev - 1));
+  };
+
+  const goToNextPage = () => {
+    setCurrentPage((prev) => Math.min(totalPages, prev + 1));
+  };
+
+  // --- MODIFICACIÓN DEL SCROLL: Scroll a la parte superior de la lista de productos cuando cambie la página, categoría o búsqueda ---
+  useEffect(() => {
+    if (productListRef.current) {
+      productListRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [currentPage, selectedCategory, searchQuery]); // Dependencias: cualquier cambio aquí activa el scroll
+
   if (isLoading) {
     return (
-      <section id="productos" className="container mx-auto p-8 py-16">
-        <h2 className="text-4xl font-serif font-bold text-center text-magia-brown mb-12 dark:text-gray-100">
-          Cargando Productos...
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-          {[...Array(8)].map((_, index) => (
-            <div key={index} className="animate-pulse bg-gray-200 dark:bg-gray-700 rounded-lg">
-              <div className="aspect-square bg-gray-300 dark:bg-gray-600 rounded-t-lg"></div>
-              <div className="p-4 space-y-2">
-                <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-3/4"></div>
-                <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-1/2"></div>
-                <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-1/4 mt-4"></div>
-              </div>
-            </div>
+      <section className="container mx-auto py-12 px-4 animate-pulse">
+        <h2 className="text-3xl font-bold text-center mb-8">Nuestros Productos</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          {Array.from({ length: PRODUCTS_PER_PAGE }).map((_, index) => (
+            <div key={index} className="bg-gray-200 rounded-lg h-80"></div>
           ))}
         </div>
       </section>
     );
   }
 
-  // Estado de error
   if (isError) {
     return (
-      <section id="productos" className="container mx-auto p-8 py-16">
-        <h2 className="text-4xl font-serif font-bold text-center text-red-600 mb-12 dark:text-red-400">
-          Error al Cargar Productos
-        </h2>
-        <p className="text-center text-gray-700 dark:text-gray-300">
-          Hubo un problema al intentar obtener los productos: {error?.message}.
-          Por favor, asegúrate de que el servidor backend esté corriendo y sea accesible.
-        </p>
+      <section className="container mx-auto py-12 px-4 text-center text-red-500">
+        <h2 className="text-3xl font-bold mb-8">Error al cargar productos</h2>
+        <p>Hubo un problema al intentar obtener los productos: {error.message}</p>
+        <p>Por favor, inténtalo de nuevo más tarde.</p>
       </section>
     );
   }
 
   return (
-    <section id="productos" className="py-16 bg-white texture-bg">
-      <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12 space-y-2">
-          <h2 className="text-3xl md:text-4xl font-serif font-bold text-magia-brown dark:text-gray-100">
-            Nuestros Productos
-          </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            Explora nuestra colección de bolsos artesanales diseñados con materiales de calidad y elaborados con pasión.
-          </p>
+    // --- MODIFICACIÓN DEL SCROLL: Adjuntar la ref a la sección principal de productos ---
+    <section ref={productListRef} className="container mx-auto py-12 px-4">
+      <h2 className="text-3xl font-bold text-center mb-8">Nuestros Productos</h2>
+
+      {/* Controles de filtro y búsqueda */}
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
+        <div className="w-full sm:w-auto">
+          <Label htmlFor="category-select" className="sr-only">Filtrar por Categoría</Label>
+          <Select
+            onValueChange={(value) => {
+              setSelectedCategory(value);
+              setCurrentPage(1); // Reset a la primera página al cambiar la categoría
+            }}
+            value={selectedCategory}
+          >
+            <SelectTrigger id="category-select" className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Categoría" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todas las categorías</SelectItem>
+              <SelectItem value="casual">Casual</SelectItem>
+              <SelectItem value="fiesta">Fiesta</SelectItem>
+              <SelectItem value="trabajo">Trabajo</SelectItem>
+              <SelectItem value="deportivo">Deportivo</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-
-        {/* Controles de filtrado */}
-        <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0 sm:space-x-4 mb-8">
-          <div className="w-full sm:w-auto">
-            <Label htmlFor="category" className="sr-only">Categoría</Label>
-            <Select
-              value={selectedCategory}
-              onValueChange={setSelectedCategory}
-            >
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Categoría" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category} value={category} className="capitalize">
-                    {category === "todos" ? "Todas las categorías" : category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="w-full sm:w-auto relative">
-            <Label htmlFor="search" className="sr-only">Buscar</Label>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="search"
-                type="search"
-                placeholder="Buscar productos..."
-                className="w-full sm:w-[300px] pl-9"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                />
-            </div>
-          </div>
+        <div className="relative w-full sm:max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Buscar productos..."
+            className="pl-9 w-full"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1); // Reset a la primera página al buscar
+            }}
+          />
         </div>
+      </div>
 
-        {/* Lista de productos */}
-        {productsToDisplay.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {productsToDisplay.map((product) => (
-              <ProductCard key={product.id} product={product} />
+      <div className="min-h-[600px] flex flex-col justify-between">
+        {paginatedProducts.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {paginatedProducts.map((product) => (
+              <ProductCard key={product.name} product={product} /> 
             ))}
           </div>
         ) : (
-          <div className="text-center py-12">
+          <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
             <h3 className="text-lg font-medium mb-2">No se encontraron productos</h3>
             <p className="text-muted-foreground mb-4">Intenta con otra búsqueda o categoría</p>
             <Button
@@ -203,6 +169,7 @@ export default function ProductList() {
               onClick={() => {
                 setSelectedCategory("todos");
                 setSearchQuery("");
+                setCurrentPage(1); // Reset page on clear filters
               }}
             >
               Ver todos los productos
@@ -211,7 +178,7 @@ export default function ProductList() {
         )}
 
         {/* Controles de Paginación */}
-        {totalPages > 1 && ( // Mostrar paginación solo si hay más de 1 página
+        {totalPages > 1 && (
           <div className="flex justify-center items-center space-x-2 mt-8">
             <Button
               variant="outline"
@@ -229,7 +196,7 @@ export default function ProductList() {
                 >
                   {index + 1}
                 </Button>
-              ))}
+              ))}\
             </div>
             <Button
               variant="outline"
