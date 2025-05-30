@@ -1,14 +1,13 @@
 // src/pages/AdminDashboard.tsx
 import React, { useState, useEffect, useMemo } from 'react';
-// *** CAMBIO AQUI: Importa tu instancia configurada de axios ***
-import api from '../utils/axiosInstance'; // Asegúrate de que la ruta relativa sea correcta (desde pages a utils)
+import api from '../utils/axiosInstance';
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search } from "lucide-react";
+import { Search, UploadCloud } from "lucide-react"; // <-- Importar UploadCloud
 import {
   Dialog,
   DialogContent,
@@ -21,7 +20,6 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from '../context/AuthContext';
 
-// ¡Importa la interfaz Product desde tu archivo de tipos global!
 import { Product } from "@/types/product";
 
 const AdminDashboard: React.FC = () => {
@@ -30,26 +28,21 @@ const AdminDashboard: React.FC = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  // Estado para el formulario de nuevo/edición de producto
   const [productForm, setProductForm] = useState({
     name: '',
     description: '',
-    price: '', // Usamos string para el input y convertimos a number al enviar
+    price: '',
     category: '',
     featured: false,
     active: true,
-    images: [] as File[], // Para las nuevas imágenes a subir (objetos File)
-    existingImageUrls: [] as string[], // Para URLs de imágenes ya existentes en la DB
+    images: [] as File[],
+    existingImageUrls: [] as string[],
   });
 
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  // Nuevo estado para el término de búsqueda
   const [searchQuery, setSearchQuery] = useState('');
-
-  // *** CAMBIO AQUI: ELIMINAR API_BASE_URL, ya no es necesario ***
-  // La URL base del backend ya está configurada en `axiosInstance.ts`
 
   useEffect(() => {
     fetchProducts();
@@ -58,7 +51,6 @@ const AdminDashboard: React.FC = () => {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      // *** CAMBIO CLAVE AQUÍ: Usar 'api' y la ruta relativa ***
       const response = await api.get('/api/products');
       setProducts(response.data);
     } catch (error: any) {
@@ -88,13 +80,32 @@ const AdminDashboard: React.FC = () => {
     }));
   };
 
+  // --- MODIFICACIÓN CLAVE: Permitir añadir múltiples conjuntos de nuevas imágenes ---
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      // Al seleccionar nuevos archivos, reemplazamos la lista actual de 'images'
-      setProductForm((prevData) => ({
-        ...prevData,
-        images: Array.from(e.target.files),
-      }));
+      const newFiles = Array.from(e.target.files);
+
+      setProductForm((prevData) => {
+        const existingNewFiles = prevData.images;
+
+        // Combinar imágenes existentes con las nuevas, filtrando duplicados por nombre y tamaño
+        const combinedFiles = [...existingNewFiles];
+        newFiles.forEach(newFile => {
+          const isDuplicate = combinedFiles.some(
+            existingFile => existingFile.name === newFile.name && existingFile.size === newFile.size
+          );
+          if (!isDuplicate) {
+            combinedFiles.push(newFile);
+          }
+        });
+
+        return {
+          ...prevData,
+          images: combinedFiles,
+        };
+      });
+      // Importante: Limpiar el valor del input de archivo para que el mismo archivo pueda ser seleccionado de nuevo
+      e.target.value = '';
     }
   };
 
@@ -105,7 +116,6 @@ const AdminDashboard: React.FC = () => {
     }));
   };
 
-  // --- NUEVA FUNCIÓN: Eliminar una imagen recién seleccionada de la previsualización ---
   const handleRemoveNewImage = (indexToRemove: number) => {
     setProductForm((prevData) => {
       const newImages = prevData.images.filter((_, index) => index !== indexToRemove);
@@ -114,12 +124,7 @@ const AdminDashboard: React.FC = () => {
         images: newImages,
       };
     });
-    // Opcional: Si solo hay una imagen restante en el input de archivo y se elimina,
-    // es buena práctica resetear el input para que el usuario pueda volver a seleccionarla.
-    // Esto es un poco más complejo, pero si el input `multiple` se reinicia completamente en `resetForm`,
-    // generalmente es suficiente.
   };
-
 
   const handleCreateOrUpdateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -141,7 +146,6 @@ const AdminDashboard: React.FC = () => {
 
     try {
       if (editingProduct) {
-        // *** CAMBIO CLAVE AQUÍ: Usar 'api' y la ruta relativa ***
         await api.put(`/api/products/${editingProduct.id}`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
@@ -149,7 +153,6 @@ const AdminDashboard: React.FC = () => {
         });
         toast({ title: "Producto Actualizado", description: "El producto ha sido actualizado exitosamente." });
       } else {
-        // *** CAMBIO CLAVE AQUÍ: Usar 'api' y la ruta relativa ***
         await api.post('/api/products', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
@@ -178,7 +181,6 @@ const AdminDashboard: React.FC = () => {
     }
     setLoading(true);
     try {
-      // *** CAMBIO CLAVE AQUÍ: Usar 'api' y la ruta relativa ***
       await api.delete(`/api/products/${id}`);
       toast({ title: "Producto Eliminado", description: "El producto ha sido eliminado exitosamente." });
       fetchProducts();
@@ -209,7 +211,7 @@ const AdminDashboard: React.FC = () => {
       category: product.category,
       featured: product.featured,
       active: product.active,
-      images: [], // Asegurarse de que no haya nuevas imágenes cargadas previamente
+      images: [],
       existingImageUrls: product.images || [],
     });
     setIsDialogOpen(true);
@@ -233,7 +235,6 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  // Lógica de filtrado de productos
   const filteredProducts = useMemo(() => {
     if (!searchQuery) {
       return products;
@@ -264,7 +265,6 @@ const AdminDashboard: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {/* Campo de búsqueda */}
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -278,8 +278,7 @@ const AdminDashboard: React.FC = () => {
           {loading ? (
             <p className="text-center text-lg">Cargando productos...</p>
           ) : (
-            // Contenedor con scroll para la tabla
-            <div className="overflow-y-auto max-h-[60vh] border rounded-md"> {/* Añadido scroll y altura máxima */}
+            <div className="overflow-y-auto max-h-[60vh] border rounded-md">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -334,7 +333,6 @@ const AdminDashboard: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Dialogo para Agregar/Editar Producto (sin cambios relevantes aquí) */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto p-6">
           <DialogHeader>
@@ -396,10 +394,29 @@ const AdminDashboard: React.FC = () => {
                 </div>
               </div>
             )}
-            {/* Subida de Nuevas Imágenes */}
+            {/* Subida de Nuevas Imágenes - MODIFICACIÓN DE APARIENCIA */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="images" className="text-right">Nuevas Imágenes</Label>
-              <Input id="images" name="images" type="file" multiple onChange={handleFileChange} className="col-span-3" />
+              <div className="col-span-3">
+                <label
+                  htmlFor="images"
+                  className="flex flex-col items-center justify-center w-full p-4 border-2 border-dashed rounded-md cursor-pointer bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
+                >
+                  <UploadCloud className="w-8 h-8 text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground text-center">
+                    Haz clic para subir o arrastra y suelta imágenes
+                  </p>
+                  <Input
+                    id="images"
+                    name="images"
+                    type="file"
+                    multiple
+                    onChange={handleFileChange}
+                    className="hidden" // Oculta el input de archivo predeterminado
+                    accept="image/*" // Limita la selección a tipos de imagen
+                  />
+                </label>
+              </div>
             </div>
             {/* Previsualización de las nuevas imágenes seleccionadas */}
             {productForm.images.length > 0 && (
@@ -414,7 +431,7 @@ const AdminDashboard: React.FC = () => {
                         variant="destructive"
                         size="sm"
                         className="absolute top-0 right-0 p-1 h-auto rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => handleRemoveNewImage(index)} // <-- Llamada a la nueva función
+                        onClick={() => handleRemoveNewImage(index)}
                       >
                         X
                       </Button>
