@@ -1,5 +1,5 @@
 // src/components/ProductList.tsx
-import React, { useEffect, useState, useRef } from "react"; // <--- Añadir 'useRef' aquí
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,142 +26,113 @@ export default function ProductList() {
   const PRODUCTS_PER_PAGE = 8;
   const [currentPage, setCurrentPage] = useState(1);
 
-  // --- MODIFICACIÓN DEL SCROLL: Crear una ref para la parte superior de la sección de productos ---
-  const productListRef = useRef<HTMLDivElement>(null);
-
   // Fetching de productos desde el backend con React Query
   const fetchProducts = async (): Promise<Product[]> => {
     const response = await api.get('/api/products');
     return response.data;
   };
 
-  const {
-    data: allProducts,
-    isLoading,
-    isError,
-    error,
-  } = useQuery<Product[], Error>({
-    queryKey: ['products'],
+  const { data: products, isLoading, isError, error } = useQuery<Product[]>({
+    queryKey: ['products'], // <-- Clave de la query, importante para invalidación
     queryFn: fetchProducts,
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
   });
 
-  // Filtrado de productos
-  const filteredProducts = React.useMemo(() => {
-    if (!allProducts) return [];
-    return allProducts.filter((product) => {
-      const matchesCategory =
-        selectedCategory === "todos" || product.category === selectedCategory;
-      const matchesSearch = product.name
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
-    });
-  }, [allProducts, selectedCategory, searchQuery]);
+  const availableProducts = products ? products.filter(product => product.active) : [];
 
-  // Lógica de paginación
+  const filteredProducts = availableProducts.filter((product) => {
+    const matchesCategory =
+      selectedCategory === "todos" || product.category === selectedCategory;
+    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          product.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
   const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
-  const paginatedProducts = React.useMemo(() => {
-    const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
-    const endIndex = startIndex + PRODUCTS_PER_PAGE;
-    return filteredProducts.slice(startIndex, endIndex);
-  }, [filteredProducts, currentPage, PRODUCTS_PER_PAGE]);
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * PRODUCTS_PER_PAGE,
+    currentPage * PRODUCTS_PER_PAGE
+  );
 
-  const goToPage = (pageNumber: number) => {
-    setCurrentPage(pageNumber);
-  };
-
-  const goToPrevPage = () => {
-    setCurrentPage((prev) => Math.max(1, prev - 1));
+  const goToPage = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' }); // Opcional: scroll a la parte superior al cambiar de página
   };
 
   const goToNextPage = () => {
-    setCurrentPage((prev) => Math.min(totalPages, prev + 1));
+    if (currentPage < totalPages) {
+      goToPage(currentPage + 1);
+    }
   };
 
-  // --- MODIFICACIÓN DEL SCROLL: Scroll a la parte superior de la lista de productos cuando cambie la página, categoría o búsqueda ---
-  useEffect(() => {
-    if (productListRef.current) {
-      productListRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const goToPrevPage = () => {
+    if (currentPage > 1) {
+      goToPage(currentPage - 1);
     }
-  }, [currentPage, selectedCategory, searchQuery]); // Dependencias: cualquier cambio aquí activa el scroll
+  };
+
+  // Obtener categorías únicas
+  const categories = Array.from(new Set(availableProducts.map((p) => p.category)));
+
+  // Resetear la página a 1 cuando cambian los filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, searchQuery]);
+
 
   if (isLoading) {
-    return (
-      <section className="container mx-auto py-12 px-4 animate-pulse">
-        <h2 className="text-3xl font-bold text-center mb-8">Nuestros Productos</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-          {Array.from({ length: PRODUCTS_PER_PAGE }).map((_, index) => (
-            <div key={index} className="bg-gray-200 rounded-lg h-80"></div>
-          ))}
-        </div>
-      </section>
-    );
+    return <div className="container mx-auto px-4 py-8 text-center">Cargando productos...</div>;
   }
 
   if (isError) {
-    return (
-      <section className="container mx-auto py-12 px-4 text-center text-red-500">
-        <h2 className="text-3xl font-bold mb-8">Error al cargar productos</h2>
-        <p>Hubo un problema al intentar obtener los productos: {error.message}</p>
-        <p>Por favor, inténtalo de nuevo más tarde.</p>
-      </section>
-    );
+    return <div className="container mx-auto px-4 py-8 text-center text-red-500">Error al cargar los productos: {error?.message}</div>;
   }
 
   return (
-    // --- MODIFICACIÓN DEL SCROLL: Adjuntar la ref a la sección principal de productos ---
-    <section ref={productListRef} className="container mx-auto py-12 px-4">
-      <h2 className="text-3xl font-bold text-center mb-8">Nuestros Productos</h2>
+    <section id="productos" className="container mx-auto px-4 py-8"> {/* <-- Añadir el ID aquí */}
+      <h2 className="text-4xl font-serif font-extrabold text-center mb-10 text-magia-brown dark:text-gray-100 animate-fade-in-up">
+        Nuestra Colección
+      </h2>
 
       {/* Controles de filtro y búsqueda */}
-      <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
-        <div className="w-full sm:w-auto">
-          <Label htmlFor="category-select" className="sr-only">Filtrar por Categoría</Label>
-          <Select
-            onValueChange={(value) => {
-              setSelectedCategory(value);
-              setCurrentPage(1); // Reset a la primera página al cambiar la categoría
-            }}
-            value={selectedCategory}
-          >
-            <SelectTrigger id="category-select" className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Categoría" />
+      <div className="mb-8 flex flex-col md:flex-row gap-4 items-center justify-between p-4 bg-card rounded-lg shadow-sm border border-border">
+        {/* Búsqueda por nombre/descripción */}
+        <div className="relative w-full md:w-1/2">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Buscar por nombre o descripción..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9"
+          />
+        </div>
+
+        {/* Filtro por categoría */}
+        <div className="w-full md:w-1/3 lg:w-1/4">
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Seleccionar Categoría" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todas las categorías</SelectItem>
-              <SelectItem value="casual">Casual</SelectItem>
-              <SelectItem value="fiesta">Fiesta</SelectItem>
-              <SelectItem value="trabajo">Trabajo</SelectItem>
-              <SelectItem value="deportivo">Deportivo</SelectItem>
+              {categories.map((category) => (
+                <SelectItem key={category} value={category}>
+                  {category}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
-        <div className="relative w-full sm:max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Buscar productos..."
-            className="pl-9 w-full"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1); // Reset a la primera página al buscar
-            }}
-          />
-        </div>
       </div>
 
-      <div className="min-h-[600px] flex flex-col justify-between">
+      {/* Grid de productos */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {paginatedProducts.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            {paginatedProducts.map((product) => (
-              <ProductCard key={product.name} product={product} /> 
-            ))}
-          </div>
+          paginatedProducts.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))
         ) : (
-          <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+          <div className="col-span-full text-center py-10">
             <h3 className="text-lg font-medium mb-2">No se encontraron productos</h3>
             <p className="text-muted-foreground mb-4">Intenta con otra búsqueda o categoría</p>
             <Button
@@ -169,7 +140,6 @@ export default function ProductList() {
               onClick={() => {
                 setSelectedCategory("todos");
                 setSearchQuery("");
-                setCurrentPage(1); // Reset page on clear filters
               }}
             >
               Ver todos los productos
@@ -179,7 +149,7 @@ export default function ProductList() {
 
         {/* Controles de Paginación */}
         {totalPages > 1 && (
-          <div className="flex justify-center items-center space-x-2 mt-8">
+          <div className="col-span-full flex justify-center items-center space-x-2 mt-8">
             <Button
               variant="outline"
               onClick={goToPrevPage}
@@ -196,7 +166,7 @@ export default function ProductList() {
                 >
                   {index + 1}
                 </Button>
-              ))}\
+              ))}
             </div>
             <Button
               variant="outline"
