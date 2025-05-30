@@ -1,24 +1,24 @@
-# Logs
-logs
+# dependencias de Node.js
+/node_modules
+/backend/node_modules
+
+# variables de entorno
+.env
+/backend/.env
+
+# Archivos de build/compilación de Vite
+/dist
+/.vite
+
+# Caché de npm, yarn, bun (si los usas)
 *.log
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+.bun/
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# Archivos del sistema operativo
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Thumbs.db
+
+# Archivos de configuración de IDE (opcional, si no quieres que se compartan)
+.vscode/

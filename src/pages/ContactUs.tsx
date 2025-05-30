@@ -3,6 +3,7 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import axios from 'axios'; // ¡Importa axios!
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,9 +20,6 @@ const contactFormSchema = z.object({
 });
 
 type ContactFormValues = z.infer<typeof contactFormSchema>;
-
-// ¡Define la URL de Formspree aquí!
-const FORMSPREE_FORM_URL = 'https://formspree.io/f/mvgajzlj'; // <-- ¡Tu URL de Formspree!
 
 const ContactUs: React.FC = () => {
   const { toast } = useToast();
@@ -43,38 +41,35 @@ const ContactUs: React.FC = () => {
 
   const onSubmit = async (data: ContactFormValues) => {
     try {
-      // Envía los datos del formulario a Formspree
-      const response = await fetch(FORMSPREE_FORM_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json', // Importante para enviar JSON
-          'Accept': 'application/json', // Formspree recomienda esto
-        },
-        body: JSON.stringify(data), // Convierte el objeto de datos a JSON
-      });
+      // *** CAMBIO CLAVE AQUÍ PARA PRUEBAS LOCALES ***
+      // Apunta directamente a la URL de tu backend para desarrollo local
+      const response = await axios.post('/api/contact', data);
+      // CUANDO ESTÉS LISTO PARA DESPLEGAR EN VERCEL, CAMBIA LA LÍNEA ANTERIOR A:
+      // const response = await axios.post('/api/contact', data);
 
-      if (response.ok) {
+
+      if (response.status === 200) { // Comprueba el estado HTTP
         toast({
           title: 'Mensaje enviado!',
           description: 'Gracias por contactarnos. Te responderemos pronto.',
-          variant: 'default', // O un variante de éxito si lo tienes
+          variant: 'default',
         });
         reset(); // Resetea el formulario solo si el envío fue exitoso
       } else {
-        // Manejo de errores de Formspree (por ejemplo, si la validación falla en su lado)
-        const errorData = await response.json();
-        console.error('Error al enviar el formulario a Formspree:', errorData);
+        // Axios lanza un error para estados 4xx/5xx, así que esta rama solo se alcanzaría con otros códigos de estado
+        console.error('Error al enviar el formulario al backend:', response.data);
         toast({
           title: 'Error al enviar el mensaje.',
           description: 'Hubo un problema. Por favor, inténtalo de nuevo más tarde.',
-          variant: 'destructive', // Un variante para errores
+          variant: 'destructive',
         });
       }
     } catch (error) {
-      console.error('Error de red o inesperado:', error);
+      // Manejo de errores de Axios (ej. red, o respuesta de error del servidor)
+      console.error('Error de red o del servidor al enviar el formulario:', error);
       toast({
-        title: 'Error de conexión.',
-        description: 'No se pudo conectar con el servidor. Verifica tu conexión a internet.',
+        title: 'Error de conexión o del servidor.',
+        description: 'No se pudo conectar con el servidor o hubo un problema. Verifica que tu backend esté corriendo y la URL sea correcta.',
         variant: 'destructive',
       });
     }
@@ -111,8 +106,8 @@ const ContactUs: React.FC = () => {
               <Textarea id="message" {...register('message')} rows={5} />
               {errors.message && <p className="text-red-500 text-sm mt-1">{errors.message.message}</p>}
             </div>
-            <Button type="submit" className="w-full" disabled={isSubmitting}> {/* Deshabilitar mientras se envía */}
-              {isSubmitting ? 'Enviando...' : 'Enviar Mensaje'} {/* Texto cambia al enviar */}
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? 'Enviando...' : 'Enviar Mensaje'}
             </Button>
           </form>
 

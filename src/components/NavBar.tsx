@@ -1,17 +1,20 @@
 // src/components/NavBar.tsx
-import { ShoppingCart } from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router-dom"; // <-- Importa useNavigate
+import { ShoppingCart, LayoutDashboard } from "lucide-react"; // Añadido LayoutDashboard
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import CartDrawer from "./CartDrawer";
 import { ModeToggle } from "./mode-toggle";
-import React from 'react'; // Asegúrate de importar React
+import React from 'react';
+import { useAuth } from '../context/AuthContext';
+import { LogIn, LogOut } from "lucide-react"; // Iconos para login/logout
 
 export default function NavBar() {
   const { totalItems } = useCart();
   const location = useLocation();
-  const navigate = useNavigate(); // <-- Usa el hook useNavigate
+  const navigate = useNavigate();
+  const { isAuthenticated, logout } = useAuth(); // Obtén el estado de autenticación y la función logout
 
   // Función para manejar el clic en el enlace de "Inicio"
   const handleHomeClick = (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
@@ -21,17 +24,13 @@ export default function NavBar() {
     }
   };
 
-  // NUEVA FUNCIÓN: Para manejar el clic en el enlace de "Productos"
+  // Función: Para manejar el clic en el enlace de "Productos"
   const handleProductsClick = (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
     e.preventDefault(); // Siempre prevenimos el comportamiento por defecto del <a>
 
     if (location.pathname !== '/') {
       // Si NO estamos en la página de inicio, navegamos a ella con el hash
       navigate('/#productos');
-      // Después de navegar, el componente puede montarse o actualizarse,
-      // y la lógica de scroll se ejecutará en la página de destino.
-      // Podríamos añadir un pequeño retardo si el scroll no funciona inmediatamente
-      // debido al tiempo de renderizado de la página, pero primero probemos sin él.
       setTimeout(() => {
         document.getElementById('productos')?.scrollIntoView({ behavior: 'smooth' });
       }, 100); // Pequeño retardo para asegurar que el elemento exista después de la navegación
@@ -63,27 +62,27 @@ export default function NavBar() {
             Inicio
           </Link>
           <a
-            href="/#productos" // Cambia a "/#productos" para que la navegación con hash sea más clara
-            onClick={handleProductsClick} // <-- Aplica el nuevo manejador de clic aquí
+            href="/#productos"
+            onClick={handleProductsClick}
             className="text-magia-dark hover:text-magia-terracotta transition-colors font-medium dark:text-gray-300 dark:hover:text-magia-terracotta"
           >
             Productos
           </a>
           <Link
-            to="/about"
+            to="/about-us"
             className="text-magia-dark hover:text-magia-terracotta transition-colors font-medium dark:text-gray-300 dark:hover:text-magia-terracotta"
           >
             Nosotros
           </Link>
           <Link
-            to="/contact"
+            to="/contact-us"
             className="text-magia-dark hover:text-magia-terracotta transition-colors font-medium dark:text-gray-300 dark:hover:text-magia-terracotta"
           >
             Contactanos
           </Link>
         </nav>
 
-        {/* Acciones de la derecha (Carrito, Modo, Menú móvil) */}
+        {/* Acciones de la derecha (Carrito, Modo, Login/Logout, Menú móvil) */}
         <div className="flex items-center space-x-4">
           {/* Botón de Carrito con Sheet (Drawer) */}
           <Sheet>
@@ -102,6 +101,30 @@ export default function NavBar() {
 
           {/* Componente para el cambio de tema (Claro/Oscuro) */}
           <ModeToggle />
+
+          {/* Botones de Admin/Login/Logout en Desktop */}
+          <div className="hidden md:flex items-center space-x-2"> {/* Modificado para usar flex y space-x para alinear botones */}
+            {isAuthenticated ? (
+              <>
+                {/* Nuevo Botón del Panel de Admin */}
+                <Link to="/admin">
+                  <Button variant="outline" size="icon">
+                    <LayoutDashboard className="h-5 w-5" />
+                  </Button>
+                </Link>
+                {/* Botón de Cerrar Sesión */}
+                <Button onClick={logout} variant="secondary" size="icon">
+                  <LogOut className="h-5 w-5" />
+                </Button>
+              </>
+            ) : (
+              <Link to="/admin-login">
+                <Button variant="outline" size="icon">
+                  <LogIn className="h-5 w-5" />
+                </Button>
+              </Link>
+            )}
+          </div>
 
           {/* Menú para dispositivos móviles */}
           <Sheet>
@@ -139,14 +162,28 @@ export default function NavBar() {
               <nav className="flex flex-col gap-4 mt-6 text-lg">
                 <Link to="/" onClick={handleHomeClick} className="hover:text-magia-terracotta" >Inicio</Link>
                 <a
-                  href="/#productos" // Cambia a "/#productos"
-                  onClick={handleProductsClick} // <-- Aplica el nuevo manejador de clic aquí
+                  href="/#productos"
+                  onClick={handleProductsClick}
                   className="hover:text-magia-terracotta"
                 >
                   Productos
                 </a>
-                <Link to="/about" className="hover:text-magia-terracotta">Nosotros</Link>
-                <Link to="/contact" className="hover:text-magia-terracotta">Contactanos</Link>
+                <Link to="/about-us" className="hover:text-magia-terracotta">Nosotros</Link>
+                <Link to="/contact-us" className="hover:text-magia-terracotta">Contactanos</Link>
+
+                {/* Enlaces de Admin en el menú móvil (se mantienen como están, son consistentes) */}
+                {isAuthenticated ? (
+                  <>
+                    <Link to="/admin" className="hover:text-magia-terracotta">Panel Admin</Link>
+                    <Button onClick={logout} variant="ghost" className="justify-start px-0 text-lg hover:text-magia-terracotta">
+                      <LogOut className="h-5 w-5 mr-2" /> Cerrar Sesión
+                    </Button>
+                  </>
+                ) : (
+                  <Link to="/admin-login" className="hover:text-magia-terracotta flex items-center">
+                    <LogIn className="h-5 w-5 mr-2" /> Admin Login
+                  </Link>
+                )}
               </nav>
             </SheetContent>
           </Sheet>
