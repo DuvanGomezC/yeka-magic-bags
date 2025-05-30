@@ -7,3 +7,7 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 18
+    # --- Añadir esta sección para el reescritura de rutas ---
+    rewrites:
+      - source: /*
+        destination: /index.html
