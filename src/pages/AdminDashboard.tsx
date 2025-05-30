@@ -90,6 +90,7 @@ const AdminDashboard: React.FC = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
+      // Al seleccionar nuevos archivos, reemplazamos la lista actual de 'images'
       setProductForm((prevData) => ({
         ...prevData,
         images: Array.from(e.target.files),
@@ -103,6 +104,22 @@ const AdminDashboard: React.FC = () => {
       existingImageUrls: prevData.existingImageUrls.filter(url => url !== urlToRemove),
     }));
   };
+
+  // --- NUEVA FUNCIÓN: Eliminar una imagen recién seleccionada de la previsualización ---
+  const handleRemoveNewImage = (indexToRemove: number) => {
+    setProductForm((prevData) => {
+      const newImages = prevData.images.filter((_, index) => index !== indexToRemove);
+      return {
+        ...prevData,
+        images: newImages,
+      };
+    });
+    // Opcional: Si solo hay una imagen restante en el input de archivo y se elimina,
+    // es buena práctica resetear el input para que el usuario pueda volver a seleccionarla.
+    // Esto es un poco más complejo, pero si el input `multiple` se reinicia completamente en `resetForm`,
+    // generalmente es suficiente.
+  };
+
 
   const handleCreateOrUpdateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -192,7 +209,7 @@ const AdminDashboard: React.FC = () => {
       category: product.category,
       featured: product.featured,
       active: product.active,
-      images: [],
+      images: [], // Asegurarse de que no haya nuevas imágenes cargadas previamente
       existingImageUrls: product.images || [],
     });
     setIsDialogOpen(true);
@@ -209,6 +226,11 @@ const AdminDashboard: React.FC = () => {
       images: [],
       existingImageUrls: [],
     });
+    // Importante: Resetear el input de tipo file para que el usuario pueda volver a seleccionar los mismos archivos si lo desea
+    const fileInput = document.getElementById('images') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
   };
 
   // Lógica de filtrado de productos
@@ -385,8 +407,17 @@ const AdminDashboard: React.FC = () => {
                 <Label className="text-right">Previsualización</Label>
                 <div className="col-span-3 flex flex-wrap gap-2">
                   {productForm.images.map((file, index) => (
-                    <div key={file.name + index} className="w-24 h-24">
+                    <div key={file.name + index} className="relative group w-24 h-24">
                       <img src={URL.createObjectURL(file)} alt={`Previsualización ${index}`} className="w-full h-full object-cover rounded" />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-0 right-0 p-1 h-auto rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => handleRemoveNewImage(index)} // <-- Llamada a la nueva función
+                      >
+                        X
+                      </Button>
                     </div>
                   ))}
                 </div>
