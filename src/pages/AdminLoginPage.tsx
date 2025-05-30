@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { useToast } from "@/components/ui/use-toast"; // Si usas shadcn/ui Toast
+import { useToast } from "@/components/ui/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -21,8 +21,10 @@ const AdminLoginPage: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      // URL de tu backend
-      const response = await axios.post('http://localhost:3001/api/auth/login', { email, password });
+      // *** CAMBIO CLAVE AQUÍ: Usamos VITE_BACKEND_URL en lugar de la URL hardcodeada ***
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+      const response = await axios.post(`${backendUrl}/api/auth/login`, { email, password });
+
       const { token } = response.data;
       login(token); // Guardar el token en el contexto y localStorage
       toast({

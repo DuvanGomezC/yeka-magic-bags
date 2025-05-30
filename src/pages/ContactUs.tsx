@@ -1,14 +1,15 @@
+// src/pages/ContactUs.tsx
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import axios from 'axios'; // Asegúrate de tener axios instalado 
+import axios from 'axios';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/components/ui/use-toast'; // Asegúrate de que useToast esté correctamente implementado
+import { useToast } from '@/components/ui/use-toast';
 
 // Define el esquema de validación con Zod
 const contactFormSchema = z.object({
@@ -40,10 +41,8 @@ const ContactUs: React.FC = () => {
 
   const onSubmit = async (data: ContactFormValues) => {
     try {
-      // *** CAMBIO CLAVE AQUÍ PARA PRODUCCIÓN EN RENDER ***
-      // En Render, VITE_BACKEND_API_URL se configurará como la URL pública de tu backend.
-      // En desarrollo local, usará 'http://localhost:3001'.
-      const backendUrl = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3001';
+      // *** CAMBIO CLAVE AQUÍ: Usamos VITE_BACKEND_URL para coincidir con la configuración de Render ***
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
       // La ruta específica para el contacto es /api/contact según tu backend/src/app.js
       const response = await axios.post(`${backendUrl}/api/contact`, data);
 
@@ -55,7 +54,6 @@ const ContactUs: React.FC = () => {
         });
         reset(); // Limpia el formulario después del envío exitoso
       } else {
-        // En caso de que el backend responda con un estado diferente de 200 pero sin lanzar error
         console.error('Error al enviar el formulario al backend:', response.data);
         toast({
           title: 'Error al enviar el mensaje.',
