@@ -1,7 +1,5 @@
 // src/context/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-// Ya no necesitamos importar axios aquí directamente para los interceptores globales
-// import axios from 'axios'; 
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -17,23 +15,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoading, setIsLoading] = useState<boolean>(true); // Para manejar la carga inicial
 
   useEffect(() => {
-    // Verificar el token al cargar la aplicación desde localStorage con la clave 'token'
-    const token = localStorage.getItem('token'); // <- CAMBIO: Usa localStorage y clave 'token'
+    // Verificar el token al cargar la aplicación desde sessionStorage con la clave 'token'
+    const token = sessionStorage.getItem('token'); // <- CAMBIO: Usa sessionStorage y clave 'token'
     if (token) {
-      // Opcional: Podrías hacer una petición al backend para validar el token si es necesario
-      // Por simplicidad, asumimos que si el token existe, estamos autenticados (hasta que falle una petición)
       setIsAuthenticated(true);
     }
     setIsLoading(false);
   }, []);
 
   const login = (token: string) => {
-    localStorage.setItem('token', token); // <- CAMBIO: Usa localStorage y clave 'token'
+    sessionStorage.setItem('token', token); // <- CAMBIO: Usa sessionStorage y clave 'token'
     setIsAuthenticated(true);
   };
 
   const logout = () => {
-    localStorage.removeItem('token'); // <- CAMBIO: Usa localStorage y clave 'token'
+    sessionStorage.removeItem('token'); // <- CAMBIO: Usa sessionStorage y clave 'token'
     setIsAuthenticated(false);
   };
 
