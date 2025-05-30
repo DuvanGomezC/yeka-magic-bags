@@ -13,4 +13,4 @@ services:
     routes:
       - type: rewrite
         source: /*
-        destination: /index.html
+        destination: /yeka-magic-bags-frontend.onrender.com
