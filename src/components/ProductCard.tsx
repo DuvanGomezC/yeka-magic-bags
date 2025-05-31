@@ -171,7 +171,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             className="flex items-center gap-2 min-w-[100px] px-3 py-2 bg-green-600 text-white hover:bg-green-700 active:bg-green-800 transition-colors duration-200"
           >
             <ShoppingBag className="h-4 w-4 flex-shrink-0" />
-            <span className="whitespace-nowrap">Añadir</span>
+            <span className="whitespace-nowrap">Añadir al carrito</span>
           </Button>
         </div>
       </div>
