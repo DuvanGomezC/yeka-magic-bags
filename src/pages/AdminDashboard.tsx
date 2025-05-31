@@ -19,9 +19,55 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from '../context/AuthContext';
-import { useQueryClient } from '@tanstack/react-query'; // <-- Importar useQueryClient
+import { useQueryClient } from '@tanstack/react-query';
 
 import { Product } from "@/types/product";
+
+// Función para procesar la imagen: redimensionar y convertir a WebP
+const processImage = (file: File): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 600;
+        canvas.height = 600;
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) {
+          return reject(new Error('No se pudo obtener el contexto del canvas.'));
+        }
+
+        // Dibuja la imagen en el canvas. Esto redimensionará a 600x600,
+        // estirando o comprimiendo si las proporciones no son las mismas.
+        ctx.drawImage(img, 0, 0, 600, 600);
+
+        // Convierte el canvas a un Blob de tipo image/webp
+        canvas.toBlob((blob) => {
+          if (blob) {
+            // Crea un nuevo objeto File a partir del Blob, manteniendo el nombre original
+            // pero cambiando la extensión a .webp
+            const newFileName = file.name.split('.').slice(0, -1).join('.') + '.webp';
+            const processedFile = new File([blob], newFileName, { type: 'image/webp' });
+            resolve(processedFile);
+          } else {
+            reject(new Error('Error al convertir la imagen a WebP.'));
+          }
+        }, 'image/webp', 0.8); // 0.8 es la calidad (80%)
+      };
+      img.onerror = (error) => {
+        reject(new Error('Error al cargar la imagen para procesamiento.'));
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.onerror = (error) => {
+      reject(new Error('Error al leer el archivo de imagen.'));
+    };
+    reader.readAsDataURL(file);
+  });
+};
+
 
 const AdminDashboard: React.FC = () => {
   const { logout } = useAuth();
@@ -46,7 +92,7 @@ const AdminDashboard: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
 
-  const queryClient = useQueryClient(); // <-- Obtener la instancia de queryClient
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     fetchProducts();
@@ -143,9 +189,24 @@ const AdminDashboard: React.FC = () => {
     formData.append('featured', productForm.featured.toString());
     formData.append('active', productForm.active.toString());
 
-    productForm.images.forEach(file => {
-      formData.append('images', file);
-    });
+    // --- MODIFICACIÓN CLAVE AQUÍ: Procesar imágenes antes de enviarlas ---
+    const processedImagePromises = productForm.images.map(file => processImage(file));
+    try {
+      const processedImages = await Promise.all(processedImagePromises);
+      processedImages.forEach(file => {
+        formData.append('images', file);
+      });
+    } catch (imageProcessingError: any) {
+      console.error('Error al procesar imágenes:', imageProcessingError.message);
+      toast({
+        title: "Error de Imagen",
+        description: `No se pudieron procesar todas las imágenes: ${imageProcessingError.message}`,
+        variant: "destructive",
+      });
+      setLoading(false);
+      return; // Detener la ejecución si hay un error en el procesamiento de imágenes
+    }
+    // --- FIN DE LA MODIFICACIÓN DE IMAGENES ---
 
     formData.append('existingImages', JSON.stringify(productForm.existingImageUrls));
 
@@ -167,9 +228,8 @@ const AdminDashboard: React.FC = () => {
       }
       setIsDialogOpen(false);
       resetForm();
-      // <-- ¡Cambio clave aquí para actualizar ProductList y el panel de administración!
-      queryClient.invalidateQueries({ queryKey: ['products'] }); // Invalida el cache de la query 'products' en ProductList
-      fetchProducts(); // Refetch la tabla de productos en AdminDashboard
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      fetchProducts();
     } catch (error: any) {
       console.error('Error al guardar producto:', error.response?.data || error.message);
       toast({
@@ -190,9 +250,8 @@ const AdminDashboard: React.FC = () => {
     try {
       await api.delete(`/api/products/${id}`);
       toast({ title: "Producto Eliminado", description: "El producto ha sido eliminado exitosamente." });
-      // <-- ¡Cambio clave aquí para actualizar ProductList y el panel de administración!
-      queryClient.invalidateQueries({ queryKey: ['products'] }); // Invalida el cache de la query 'products' en ProductList
-      fetchProducts(); // Refetch la tabla de productos en AdminDashboard
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      fetchProducts();
     } catch (error: any) {
       console.error('Error al eliminar producto:', error.response?.data || error.message);
       toast({
