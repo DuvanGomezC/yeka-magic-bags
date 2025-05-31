@@ -124,7 +124,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  to="/about"
+                  to="/about-us"
                   className="text-muted-foreground hover:text-magia-terracotta transition-colors"
                 >
                   Nosotros
@@ -132,7 +132,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  to="/contact"
+                  to="/contact-us" 
                   className="text-muted-foreground hover:text-magia-terracotta transition-colors"
                 >
                   Contacto
