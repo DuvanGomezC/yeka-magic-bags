@@ -19,10 +19,10 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from '../context/AuthContext';
-import { useQuery, useQueryClient } from '@tanstack/react-query'; // Import useQuery
+import { useQuery, useQueryClient } from '@tanstack/react-query'; // Import useQuery and useQueryClient
 
 import { Product } from "@/types/product";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Added for active/inactive filter
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Definir el tipo de respuesta del backend para la paginación y filtro
 interface ProductsResponse {
@@ -40,18 +40,38 @@ const processImage = (file: File): Promise<File> => {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        canvas.width = 600;
-        canvas.height = 600;
+        // Define un tamaño máximo para las imágenes, por ejemplo 800x800, manteniendo la relación de aspecto
+        const maxWidth = 800;
+        const maxHeight = 800;
+        let width = img.width;
+        let height = img.height;
+
+        // Calcula las nuevas dimensiones manteniendo la relación de aspecto
+        if (width > height) {
+          if (width > maxWidth) {
+            height *= maxWidth / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width *= maxHeight / height;
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
         const ctx = canvas.getContext('2d');
 
         if (!ctx) {
           return reject(new Error('No se pudo obtener el contexto del canvas.'));
         }
 
-        ctx.drawImage(img, 0, 0, 600, 600);
+        ctx.drawImage(img, 0, 0, width, height);
 
         canvas.toBlob((blob) => {
           if (blob) {
+            // Cambiar la extensión a .webp para el nuevo archivo
             const newFileName = file.name.split('.').slice(0, -1).join('.') + '.webp';
             const processedFile = new File([blob], newFileName, { type: 'image/webp' });
             resolve(processedFile);
@@ -60,12 +80,12 @@ const processImage = (file: File): Promise<File> => {
           }
         }, 'image/webp', 0.8); // 0.8 es la calidad (80%)
       };
-      img.onerror = (error) => {
+      img.onerror = () => {
         reject(new Error('Error al cargar la imagen para procesamiento.'));
       };
       img.src = event.target?.result as string;
     };
-    reader.onerror = (error) => {
+    reader.onerror = () => {
       reject(new Error('Error al leer el archivo de imagen.'));
     };
     reader.readAsDataURL(file);
@@ -112,7 +132,11 @@ const AdminDashboard: React.FC = () => {
     if (searchQuery) {
       params.append("search", searchQuery);
     }
-    if (filterActive !== 'all') { // Only append if not 'all'
+
+    // Solo agregar el filtro 'active' si no es 'all'.
+    // Si 'filterActive' es 'all', no se añade el parámetro 'active' a la URL,
+    // y el backend (productController.js) lo interpretará como "mostrar todos".
+    if (filterActive !== 'all') {
       params.append("active", filterActive);
     }
 
@@ -120,12 +144,14 @@ const AdminDashboard: React.FC = () => {
     return response.data;
   };
 
-  const { data, isLoading, isError, error, refetch } = useQuery<ProductsResponse, Error>({
+  const { data, isLoading, isError, error, refetch, isPlaceholderData } = useQuery<ProductsResponse, Error>({
     queryKey: ['adminProducts', currentPage, searchQuery, filterActive], // Clave de la query con filtros
     queryFn: fetchProductsAdmin,
-    keepPreviousData: true, // Mantener datos anteriores al cambiar de página
+    // CORRECCIÓN: Usar placeholderData en lugar de keepPreviousData
+    placeholderData: (previousData) => previousData,
   });
 
+  // CORRECCIÓN: Acceder a las propiedades de 'data' de forma segura
   const products = data?.products || [];
   const totalPages = data?.totalPages || 1;
   const totalProducts = data?.totalProducts || 0; // Get total count from backend
@@ -152,7 +178,7 @@ const AdminDashboard: React.FC = () => {
   }, [searchQuery, filterActive]);
 
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | React.ChangeEventHandler<HTMLTextAreaElement>>) => { // Adjusted type for textarea
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     setProductForm((prevData) => ({
       ...prevData,
@@ -193,7 +219,7 @@ const AdminDashboard: React.FC = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       handleFilesAddition(e.target.files);
-      e.target.value = '';
+      e.target.value = ''; // Clear the input so same file can be selected again if needed
     }
   };
 
@@ -264,7 +290,7 @@ const AdminDashboard: React.FC = () => {
       setIsDialogOpen(false);
       resetForm();
       queryClient.invalidateQueries({ queryKey: ['adminProducts'] }); // Invalida la caché de productos del admin
-      refetch(); // Refetch products after CUD operation
+      // No necesitas `refetch()` aquí, `invalidateQueries` ya lo dispara si hay un observador activo (que `useQuery` es).
     } catch (error: any) {
       console.error('Error al guardar producto:', error.response?.data || error.message);
       toast({
@@ -286,7 +312,6 @@ const AdminDashboard: React.FC = () => {
       await api.delete(`/api/products/${id}`);
       toast({ title: "Producto Eliminado", description: "El producto ha sido eliminado exitosamente." });
       queryClient.invalidateQueries({ queryKey: ['adminProducts'] }); // Invalida la caché de productos del admin
-      refetch(); // Refetch products after deletion
     } catch (error: any) {
       console.error('Error al eliminar producto:', error.response?.data || error.message);
       toast({
@@ -314,7 +339,7 @@ const AdminDashboard: React.FC = () => {
       category: product.category,
       featured: product.featured,
       active: product.active,
-      images: [],
+      images: [], // No precargamos files para editar, solo las URLs existentes
       existingImageUrls: product.images || [],
     });
     setIsDialogOpen(true);
@@ -333,16 +358,12 @@ const AdminDashboard: React.FC = () => {
     });
     const fileInput = document.getElementById('images') as HTMLInputElement;
     if (fileInput) {
-      fileInput.value = '';
+      fileInput.value = ''; // Clear the file input
     }
   };
 
-  // `filteredProducts` ya no es necesario, `products` de `useQuery` ya está paginado y filtrado por el backend.
-  // Sin embargo, si quieres mantener una búsqueda local *adicional* sobre los productos ya paginados (que no es lo ideal
-  // para grandes datasets), podrías hacerlo. Para un mejor rendimiento, la búsqueda debería ser siempre del lado del servidor.
-  // Mantenemos `searchQuery` como un filtro que se envía al backend.
 
-  if (isLoading) { // Use isLoading from useQuery
+  if (isLoading && !isPlaceholderData) { // Muestra cargando solo si no hay datos placeholder
     return <div className="container mx-auto p-4 text-center">Cargando productos...</div>;
   }
 
@@ -372,7 +393,7 @@ const AdminDashboard: React.FC = () => {
                 className="pl-9 pr-4 py-2 w-full"
               />
             </div>
-            {/* Filtro de Activo/Inactivo */}
+            {/* Filtro de Activo/Inactivo/Todos */}
             <div className="w-full md:w-1/4">
               <Select value={filterActive} onValueChange={setFilterActive}>
                 <SelectTrigger className="w-full">
@@ -451,6 +472,7 @@ const AdminDashboard: React.FC = () => {
                 Anterior
               </Button>
               <div className="flex space-x-1">
+                {/* Renderizar un rango de botones de página si hay muchas páginas */}
                 {Array.from({ length: totalPages }, (_, index) => (
                   <Button
                     key={index + 1}
@@ -488,6 +510,7 @@ const AdminDashboard: React.FC = () => {
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="description" className="text-right">Descripción</Label>
+              {/* Note: handleInputChange is typed for InputElement. For Textarea, you can explicitly cast or adjust signature */}
               <Textarea
                 id="description"
                 name="description"
