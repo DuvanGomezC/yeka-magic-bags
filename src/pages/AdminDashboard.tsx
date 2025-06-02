@@ -19,9 +19,18 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from '../context/AuthContext';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query'; // Import useQuery
 
 import { Product } from "@/types/product";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Added for active/inactive filter
+
+// Definir el tipo de respuesta del backend para la paginación y filtro
+interface ProductsResponse {
+  products: Product[];
+  currentPage: number;
+  totalPages: number;
+  totalProducts: number;
+}
 
 // Función para procesar la imagen: redimensionar y convertir a WebP
 const processImage = (file: File): Promise<File> => {
@@ -39,15 +48,10 @@ const processImage = (file: File): Promise<File> => {
           return reject(new Error('No se pudo obtener el contexto del canvas.'));
         }
 
-        // Dibuja la imagen en el canvas. Esto redimensionará a 600x600,
-        // estirando o comprimiendo si las proporciones no son las mismas.
         ctx.drawImage(img, 0, 0, 600, 600);
 
-        // Convierte el canvas a un Blob de tipo image/webp
         canvas.toBlob((blob) => {
           if (blob) {
-            // Crea un nuevo objeto File a partir del Blob, manteniendo el nombre original
-            // pero cambiando la extensión a .webp
             const newFileName = file.name.split('.').slice(0, -1).join('.') + '.webp';
             const processedFile = new File([blob], newFileName, { type: 'image/webp' });
             resolve(processedFile);
@@ -71,7 +75,6 @@ const processImage = (file: File): Promise<File> => {
 
 const AdminDashboard: React.FC = () => {
   const { logout } = useAuth();
-  const [products, setProducts] = useState<Product[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
@@ -91,31 +94,65 @@ const AdminDashboard: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
+  const [filterActive, setFilterActive] = useState<string>('true'); // 'true', 'false', 'all'
+
+  // --- Lógica de Paginación para el Dashboard ---
+  const PRODUCTS_PER_PAGE_ADMIN = 10; // Más productos por página para el admin
+  const [currentPage, setCurrentPage] = useState(1);
 
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+  // Fetching de productos desde el backend con React Query
+  const fetchProductsAdmin = async (): Promise<ProductsResponse> => {
+    const params = new URLSearchParams({
+      page: currentPage.toString(),
+      limit: PRODUCTS_PER_PAGE_ADMIN.toString(),
+    });
 
-  const fetchProducts = async () => {
-    setLoading(true);
-    try {
-      const response = await api.get('/api/products');
-      setProducts(response.data);
-    } catch (error: any) {
-      console.error('Error al cargar productos:', error.response?.data || error.message);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar los productos.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+    if (searchQuery) {
+      params.append("search", searchQuery);
+    }
+    if (filterActive !== 'all') { // Only append if not 'all'
+      params.append("active", filterActive);
+    }
+
+    const response = await api.get<ProductsResponse>(`/api/products?${params.toString()}`);
+    return response.data;
+  };
+
+  const { data, isLoading, isError, error, refetch } = useQuery<ProductsResponse, Error>({
+    queryKey: ['adminProducts', currentPage, searchQuery, filterActive], // Clave de la query con filtros
+    queryFn: fetchProductsAdmin,
+    keepPreviousData: true, // Mantener datos anteriores al cambiar de página
+  });
+
+  const products = data?.products || [];
+  const totalPages = data?.totalPages || 1;
+  const totalProducts = data?.totalProducts || 0; // Get total count from backend
+
+  const goToPage = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      goToPage(currentPage + 1);
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const goToPrevPage = () => {
+    if (currentPage > 1) {
+      goToPage(currentPage - 1);
+    }
+  };
+
+  // Resetear la página a 1 cuando cambian los filtros de búsqueda o activo
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterActive]);
+
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | React.ChangeEventHandler<HTMLTextAreaElement>>) => { // Adjusted type for textarea
     const { name, value, type } = e.target;
     setProductForm((prevData) => ({
       ...prevData,
@@ -189,7 +226,6 @@ const AdminDashboard: React.FC = () => {
     formData.append('featured', productForm.featured.toString());
     formData.append('active', productForm.active.toString());
 
-    // --- MODIFICACIÓN CLAVE AQUÍ: Procesar imágenes antes de enviarlas ---
     const processedImagePromises = productForm.images.map(file => processImage(file));
     try {
       const processedImages = await Promise.all(processedImagePromises);
@@ -204,9 +240,8 @@ const AdminDashboard: React.FC = () => {
         variant: "destructive",
       });
       setLoading(false);
-      return; // Detener la ejecución si hay un error en el procesamiento de imágenes
+      return;
     }
-    // --- FIN DE LA MODIFICACIÓN DE IMAGENES ---
 
     formData.append('existingImages', JSON.stringify(productForm.existingImageUrls));
 
@@ -228,8 +263,8 @@ const AdminDashboard: React.FC = () => {
       }
       setIsDialogOpen(false);
       resetForm();
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      fetchProducts();
+      queryClient.invalidateQueries({ queryKey: ['adminProducts'] }); // Invalida la caché de productos del admin
+      refetch(); // Refetch products after CUD operation
     } catch (error: any) {
       console.error('Error al guardar producto:', error.response?.data || error.message);
       toast({
@@ -250,8 +285,8 @@ const AdminDashboard: React.FC = () => {
     try {
       await api.delete(`/api/products/${id}`);
       toast({ title: "Producto Eliminado", description: "El producto ha sido eliminado exitosamente." });
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      fetchProducts();
+      queryClient.invalidateQueries({ queryKey: ['adminProducts'] }); // Invalida la caché de productos del admin
+      refetch(); // Refetch products after deletion
     } catch (error: any) {
       console.error('Error al eliminar producto:', error.response?.data || error.message);
       toast({
@@ -302,24 +337,18 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const filteredProducts = useMemo(() => {
-    if (!searchQuery) {
-      return products;
-    }
-    const query = searchQuery.toLowerCase();
-    return products.filter((product, index) => {
-      const productNumber = (index + 1).toString();
-      const productName = product.name.toLowerCase();
-      const productPrice = product.price.toString();
+  // `filteredProducts` ya no es necesario, `products` de `useQuery` ya está paginado y filtrado por el backend.
+  // Sin embargo, si quieres mantener una búsqueda local *adicional* sobre los productos ya paginados (que no es lo ideal
+  // para grandes datasets), podrías hacerlo. Para un mejor rendimiento, la búsqueda debería ser siempre del lado del servidor.
+  // Mantenemos `searchQuery` como un filtro que se envía al backend.
 
-      return (
-        productName.includes(query) ||
-        productPrice.includes(query) ||
-        productNumber.includes(query)
-      );
-    });
-  }, [products, searchQuery]);
+  if (isLoading) { // Use isLoading from useQuery
+    return <div className="container mx-auto p-4 text-center">Cargando productos...</div>;
+  }
 
+  if (isError) { // Use isError from useQuery
+    return <div className="container mx-auto p-4 text-center text-red-500">Error al cargar productos: {error?.message}</div>;
+  }
 
   return (
     <div className="container mx-auto p-4 bg-gray-50 dark:bg-gray-800 min-h-[calc(100vh-80px)]">
@@ -332,69 +361,113 @@ const AdminDashboard: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar productos por nombre, precio o número..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 py-2 w-full"
-            />
+          <div className="flex flex-col md:flex-row gap-4 mb-4 items-center">
+            {/* Búsqueda */}
+            <div className="relative w-full md:w-1/2">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar productos por nombre o descripción..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-4 py-2 w-full"
+              />
+            </div>
+            {/* Filtro de Activo/Inactivo */}
+            <div className="w-full md:w-1/4">
+              <Select value={filterActive} onValueChange={setFilterActive}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Filtrar por estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los productos</SelectItem>
+                  <SelectItem value="true">Solo activos</SelectItem>
+                  <SelectItem value="false">Solo inactivos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          {loading ? (
-            <p className="text-center text-lg">Cargando productos...</p>
-          ) : (
-            <div className="overflow-y-auto max-h-[60vh] border rounded-md">
-              <Table>
-                <TableHeader>
+
+          <div className="overflow-x-auto border rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px]">No.</TableHead>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Categoría</TableHead>
+                  <TableHead>Precio</TableHead>
+                  <TableHead>Destacado</TableHead>
+                  <TableHead>Activo</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {products.length === 0 ? (
                   <TableRow>
-                    <TableHead className="w-[50px]">No.</TableHead>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Categoría</TableHead>
-                    <TableHead>Precio</TableHead>
-                    <TableHead>Destacado</TableHead>
-                    <TableHead>Activo</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
+                    <TableCell colSpan={7} className="text-center py-4">No hay productos para mostrar con esta búsqueda o filtro.</TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredProducts.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center">No hay productos para mostrar con esta búsqueda.</TableCell>
+                ) : (
+                  products.map((product, index) => (
+                    <TableRow key={product.id}>
+                      <TableCell className="font-medium">{(currentPage - 1) * PRODUCTS_PER_PAGE_ADMIN + index + 1}.</TableCell>
+                      <TableCell className="font-medium">{product.name}</TableCell>
+                      <TableCell>{product.category}</TableCell>
+                      <TableCell>${product.price.toFixed(2)}</TableCell>
+                      <TableCell>{product.featured ? 'Sí' : 'No'}</TableCell>
+                      <TableCell>{product.active ? 'Sí' : 'No'}</TableCell>
+                      <TableCell className="text-right whitespace-nowrap">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mr-2"
+                          onClick={() => openEditProductDialog(product)}
+                        >
+                          Editar
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteProduct(product.id)}
+                          disabled={loading}
+                        >
+                          Eliminar
+                        </Button>
+                      </TableCell>
                     </TableRow>
-                  ) : (
-                    filteredProducts.map((product, index) => (
-                      <TableRow key={product.id}>
-                        <TableCell className="font-medium">{index + 1}.</TableCell>
-                        <TableCell className="font-medium">{product.name}</TableCell>
-                        <TableCell>{product.category}</TableCell>
-                        <TableCell>${product.price.toFixed(2)}</TableCell>
-                        <TableCell>{product.featured ? 'Sí' : 'No'}</TableCell>
-                        <TableCell>{product.active ? 'Sí' : 'No'}</TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="mr-2"
-                            onClick={() => openEditProductDialog(product)}
-                          >
-                            Editar
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeleteProduct(product.id)}
-                            disabled={loading}
-                          >
-                            Eliminar
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Controles de Paginación */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center space-x-2 mt-4">
+              <Button
+                variant="outline"
+                onClick={goToPrevPage}
+                disabled={currentPage === 1}
+              >
+                Anterior
+              </Button>
+              <div className="flex space-x-1">
+                {Array.from({ length: totalPages }, (_, index) => (
+                  <Button
+                    key={index + 1}
+                    variant={currentPage === index + 1 ? "default" : "outline"}
+                    onClick={() => goToPage(index + 1)}
+                  >
+                    {index + 1}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+              >
+                Siguiente
+              </Button>
             </div>
           )}
         </CardContent>
