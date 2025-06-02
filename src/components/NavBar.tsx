@@ -18,7 +18,7 @@ export default function NavBar() {
 
   // Función para manejar el clic en el enlace de "Inicio"
   const handleHomeClick = (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
-    if (location.pathname === '/#inicio') {
+    if (location.pathname === '/') {
       e.preventDefault();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -45,7 +45,7 @@ export default function NavBar() {
       <div className="container max-w-7xl mx-auto flex items-center justify-between h-16 px-4 sm:px-6">
         {/* Logo/Título del sitio */}
         <div className="flex items-center">
-          <Link to="/#inicio" className="flex items-center" onClick={handleHomeClick}>
+          <Link to="/" className="flex items-center" onClick={handleHomeClick}>
             <h1 className="text-2xl md:text-3xl font-serif font-bold tracking-tight text-magia-brown dark:text-gray-100">
               Magia <span className="text-magia-terracotta">Yeka</span>
             </h1>
@@ -55,7 +55,7 @@ export default function NavBar() {
         {/* Navegación principal (escritorio) */}
         <nav className="hidden md:flex items-center space-x-6">
           <Link
-            to="/#inicio"
+            to="/"
             onClick={handleHomeClick}
             className="text-magia-dark hover:text-magia-terracotta transition-colors font-medium dark:text-gray-300 dark:hover:text-magia-terracotta"
           >

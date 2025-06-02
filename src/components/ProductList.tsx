@@ -1,5 +1,5 @@
 // src/components/ProductList.tsx
-import React, { useEffect, useState, useRef } from "react"; // Importa useRef
+import React, { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,8 +34,11 @@ export default function ProductList() {
   const PRODUCTS_PER_PAGE = 8;
   const [currentPage, setCurrentPage] = useState(1);
 
-  // === AÑADIDO: Referencia para el scroll ===
+  // Referencia para el scroll
   const productListRef = useRef<HTMLDivElement>(null);
+
+  // Estado para controlar si es el primer render o cambio de página
+  const [isPageChange, setIsPageChange] = useState(false);
 
   // Fetching de productos desde el backend con React Query
   const fetchProducts = async (): Promise<ProductsResponse> => {
@@ -51,7 +54,7 @@ export default function ProductList() {
       params.append("search", searchQuery);
     }
 
-    params.append("active", "true"); // Siempre pedir productos activos para el cliente
+    params.append("active", "true");
 
     const response = await api.get<ProductsResponse>(`/api/products?${params.toString()}`);
     return response.data;
@@ -81,18 +84,22 @@ export default function ProductList() {
   // Efecto para reiniciar la paginación cuando cambian los filtros
   useEffect(() => {
     setCurrentPage(1);
+    setIsPageChange(false); // No es cambio de página, es cambio de filtros
   }, [selectedCategory, searchQuery]);
 
-  // === AÑADIDO: Efecto para el scroll al cambiar de página o filtros ===
+  // Efecto SOLO para scroll cuando cambia la página (no filtros)
   useEffect(() => {
-    if (productListRef.current) {
-      // Opciones de scroll: 'auto', 'smooth'
-      // 'start' o 'center' o 'end' para block
+    if (isPageChange && productListRef.current) {
       productListRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  }, [currentPage, selectedCategory, searchQuery]); // Dependencias: cuando la página o filtros cambian
+    // Resetear el flag después del scroll
+    if (isPageChange) {
+      setIsPageChange(false);
+    }
+  }, [currentPage, isPageChange]);
 
   const goToPage = (page: number) => {
+    setIsPageChange(true); // Marcar que es un cambio de página
     setCurrentPage(page);
   };
 
@@ -127,7 +134,6 @@ export default function ProductList() {
   }
 
   return (
-    // === AÑADIDO: Asigna la referencia al contenedor principal ===
     <section ref={productListRef} id="productos" className="container mx-auto px-4 py-8">
       <h2 className="text-4xl font-extrabold text-center text-magia-brown dark:text-gray-100 mb-8 animate-fade-in-up">
         Nuestros Productos
@@ -154,7 +160,6 @@ export default function ProductList() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todas las categorías</SelectItem>
-              {/* Aquí deberías cargar dinámicamente tus categorías reales */}
               <SelectItem value="velas">Velas</SelectItem>
               <SelectItem value="difusores">Difusores</SelectItem>
               <SelectItem value="jabones">Jabones Artesanales</SelectItem>
