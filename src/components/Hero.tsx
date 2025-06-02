@@ -12,7 +12,7 @@ import {
 
 export default function Hero() {
   return (
-    <section className="relative bg-background text-foreground transition-colors duration-300 overflow-hidden">
+    <section id="inicio" className="relative bg-background text-foreground transition-colors duration-300 overflow-hidden">
       <div className="container mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28"> {/* Ajuste de padding para armonizar */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <div className="space-y-7 z-10"> {/* Espaciado consistente */}

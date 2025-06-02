@@ -18,7 +18,7 @@ export default function NavBar() {
 
   // Función para manejar el clic en el enlace de "Inicio"
   const handleHomeClick = (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
-    if (location.pathname === '/') {
+    if (location.pathname === '/#inicio') {
       e.preventDefault();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -55,7 +55,7 @@ export default function NavBar() {
         {/* Navegación principal (escritorio) */}
         <nav className="hidden md:flex items-center space-x-6">
           <Link
-            to="/"
+            to="/#inicio"
             onClick={handleHomeClick}
             className="text-magia-dark hover:text-magia-terracotta transition-colors font-medium dark:text-gray-300 dark:hover:text-magia-terracotta"
           >
