@@ -25,27 +25,18 @@ export default function NavBar() {
   };
 
   // Función: Para manejar el clic en el enlace de "Productos"
-  // Esta función YA NO NECESITA LLAMARSE directamente para el <Link to="/productos">
-  // Pero la mantendré con la lógica que propusiste si aún la necesitas para otros usos
-  // o si quieres que se mantenga el hash y el scroll manual.
-  // Sin embargo, para la navegación desde la barra, el <Link> es mucho mejor.
   const handleProductsClick = (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
     e.preventDefault(); // Siempre prevenimos el comportamiento por defecto del <a>
 
-    if (location.pathname !== '/productos') { // Cambiado: Si NO estamos en la página de productos
-      // Navegamos a la página de productos y luego intentamos scroll
-      navigate('/productos'); // Navega a la ruta de productos
-      // Un pequeño retardo para asegurar que el componente ProductList se haya montado
-      // y su ref esté disponible ANTES de intentar el scroll.
-      // Sin embargo, la lógica de scroll en ProductList.tsx con useEffect ya se encargará de esto.
-      // Este setTimeout aquí es más bien un fallback o una lógica que podrías querer ajustar.
-      // Lo más robusto es que ProductList.tsx maneje su propio scroll en su useEffect.
+    if (location.pathname !== '/') {
+      // Si NO estamos en la página de inicio, navegamos a ella con el hash
+      navigate('/#productos');
       setTimeout(() => {
-        document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' }); // Usar 'products' si el id es 'products'
-      }, 100); 
+        document.getElementById('productos')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100); // Pequeño retardo para asegurar que el elemento exista después de la navegación
     } else {
-      // Si ya estamos en la página de productos, simplemente hacemos scroll
-      document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' }); // Usar 'products' si el id es 'products'
+      // Si ya estamos en la página de inicio, simplemente hacemos scroll
+      document.getElementById('productos')?.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
@@ -70,16 +61,13 @@ export default function NavBar() {
           >
             Inicio
           </Link>
-          {/* === MODIFICACIÓN AQUÍ: Usamos Link en lugar de <a> y removemos el onClick directo === */}
-          {/* La función handleProductsClick ya no se necesita directamente para este Link */}
-          {/* Su funcionalidad de scroll interno la manejará el useEffect en ProductList.tsx */}
-          <Link
-            to="/productos" // Apunta directamente a la ruta de productos
-            // onClick={handleProductsClick} // Quitado: No es necesario para un Link que navega a una ruta
+          <a
+            href="/#productos"
+            onClick={handleProductsClick}
             className="text-magia-dark hover:text-magia-terracotta transition-colors font-medium dark:text-gray-300 dark:hover:text-magia-terracotta"
           >
             Productos
-          </Link>
+          </a>
           <Link
             to="/about-us"
             className="text-magia-dark hover:text-magia-terracotta transition-colors font-medium dark:text-gray-300 dark:hover:text-magia-terracotta"
@@ -115,7 +103,7 @@ export default function NavBar() {
           <ModeToggle />
 
           {/* Botones de Admin/Login/Logout en Desktop */}
-          <div className="hidden md:flex items-center space-x-2">
+          <div className="hidden md:flex items-center space-x-2"> {/* Modificado para usar flex y space-x para alinear botones */}
             {isAuthenticated ? (
               <>
                 {/* Nuevo Botón del Panel de Admin */}
@@ -173,14 +161,13 @@ export default function NavBar() {
               </SheetHeader>
               <nav className="flex flex-col gap-4 mt-6 text-lg">
                 <Link to="/" onClick={handleHomeClick} className="hover:text-magia-terracotta" >Inicio</Link>
-                {/* === MODIFICACIÓN AQUÍ para el menú móvil: Usamos Link y removemos el onClick directo === */}
-                <Link
-                  to="/productos" // Apunta directamente a la ruta de productos
-                  // onClick={handleProductsClick} // Quitado: No es necesario para un Link que navega a una ruta
+                <a
+                  href="/#productos"
+                  onClick={handleProductsClick}
                   className="hover:text-magia-terracotta"
                 >
                   Productos
-                </Link>
+                </a>
                 <Link to="/about-us" className="hover:text-magia-terracotta">Nosotros</Link>
                 <Link to="/contact-us" className="hover:text-magia-terracotta">Contactanos</Link>
 

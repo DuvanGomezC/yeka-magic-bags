@@ -128,7 +128,7 @@ export default function ProductList() {
 
   return (
     // === AÑADIDO: Asigna la referencia al contenedor principal ===
-    <section ref={productListRef} id="products" className="container mx-auto px-4 py-8">
+    <section ref={productListRef} id="productos" className="container mx-auto px-4 py-8">
       <h2 className="text-4xl font-extrabold text-center text-magia-brown dark:text-gray-100 mb-8 animate-fade-in-up">
         Nuestros Productos
       </h2>
