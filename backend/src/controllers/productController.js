@@ -1,10 +1,13 @@
 // backend/src/controllers/productController.js
 const supabase = require('../config/supabase');
-const { v4: uuidv4 } = require('uuid');
+const { v4: uuidv4 } = require('uuid'); // Para generar IDs únicos para imágenes
 
 // Obtener todos los productos con paginación, búsqueda y filtrado
 const getProducts = async (req, res) => {
-  const { page = 1, limit = 8, category, search, active = 'true' } = req.query; // 'active' por defecto a true
+  // === CORRECCIÓN CLAVE: Eliminar el valor por defecto 'true' para 'active' ===
+  // Si 'active' no se envía desde el frontend (cuando se selecciona 'all'),
+  // 'active' será 'undefined' aquí, lo que permite que el filtro no se aplique.
+  const { page = 1, limit = 8, category, search, active } = req.query;
   const startIndex = (parseInt(page) - 1) * parseInt(limit);
   const endIndex = startIndex + parseInt(limit) - 1;
 
@@ -15,6 +18,8 @@ const getProducts = async (req, res) => {
       .order('created_at', { ascending: false });
 
     // Filtrar por estado 'active'
+    // Esta lógica es correcta si 'active' es 'true', 'false', o undefined.
+    // Si 'active' es undefined (para "Todos"), no se aplica ningún filtro de estado.
     if (active === 'true') {
       query = query.eq('active', true);
     } else if (active === 'false') {
@@ -74,58 +79,52 @@ const getProductById = async (req, res) => {
 
 // Crear un nuevo producto
 const createProduct = async (req, res) => {
-  const { name, description, price, category, featured, active } = req.body;
-  const files = req.files;
+  const { name, description, price, category, featured, active, existingImages } = req.body;
+  // Convertir featured y active a booleanos correctamente
+  const newProduct = { 
+    name, 
+    description, 
+    price, 
+    category, 
+    featured: featured === 'true', 
+    active: active === 'true' 
+  };
+  const imageUrls = JSON.parse(existingImages || '[]');
 
   try {
-    const imageUrls = [];
-
-    if (files && files.length > 0) {
-      for (const file of files) {
+    if (req.files && req.files.length > 0) {
+      const uploadPromises = req.files.map(async (file) => {
         const fileExtension = file.originalname.split('.').pop();
-        const fileName = `${uuidv4()}.${fileExtension}`;
-        const filePath = `product-images/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
+        const path = `${uuidv4()}.${fileExtension}`; // Genera un ID único para la imagen
+        const { data, error } = await supabase.storage
           .from('product-images')
-          .upload(filePath, file.buffer, {
+          .upload(path, file.buffer, {
             contentType: file.mimetype,
             upsert: false,
           });
 
-        if (uploadError) {
-          console.error('Error al subir imagen a Supabase:', uploadError.message);
-          throw new Error('Error al subir una de las imágenes.');
-        }
+        if (error) throw new Error(`Error al subir imagen ${file.originalname}: ${error.message}`);
+        // Construye la URL pública directamente
+        const publicUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/product-images/${path}`;
+        return publicUrl;
+      });
 
-        const { data: publicUrlData } = supabase.storage
-          .from('product-images')
-          .getPublicUrl(filePath);
-
-        imageUrls.push(publicUrlData.publicUrl);
-      }
+      const newImageUrls = await Promise.all(uploadPromises);
+      newProduct.images = [...imageUrls, ...newImageUrls];
+    } else {
+      newProduct.images = imageUrls;
     }
 
-    const { data, error: dbError } = await supabase
+    const { data, error } = await supabase
       .from('products')
-      .insert({
-        name,
-        description,
-        price: parseFloat(price),
-        category,
-        featured: featured === 'true',
-        active: active === 'true',
-        images: imageUrls,
-      })
-      .select()
-      .single();
+      .insert([newProduct])
+      .select();
 
-    if (dbError) throw dbError;
-
-    res.status(201).json(data);
+    if (error) throw error;
+    res.status(201).json(data[0]);
   } catch (error) {
     console.error('Error al crear producto:', error.message);
-    res.status(500).json({ error: error.message || 'Error interno del servidor al crear el producto.' });
+    res.status(500).json({ error: 'Error interno del servidor al crear el producto.' });
   }
 };
 
@@ -133,131 +132,39 @@ const createProduct = async (req, res) => {
 const updateProduct = async (req, res) => {
   const { id } = req.params;
   const { name, description, price, category, featured, active, existingImages } = req.body;
-  const newFiles = req.files;
-  let currentImageUrls = [];
+  const updatedProduct = { 
+    name, 
+    description, 
+    price, 
+    category, 
+    featured: featured === 'true', 
+    active: active === 'true' 
+  };
+  const existingImageUrls = JSON.parse(existingImages || '[]');
 
   try {
-    if (existingImages) {
-      try {
-        currentImageUrls = JSON.parse(existingImages);
-        if (!Array.isArray(currentImageUrls)) {
-          currentImageUrls = [];
-        }
-      } catch (e) {
-        console.warn("Error al parsear existingImages:", e.message);
-        currentImageUrls = [];
-      }
-    }
-
-    const { data: oldProduct, error: fetchOldProductError } = await supabase
+    // Primero, obtener el producto actual para comparar imágenes
+    const { data: currentProduct, error: fetchError } = await supabase
       .from('products')
       .select('images')
       .eq('id', id)
       .single();
 
-    if (fetchOldProductError) throw fetchOldProductError;
-
-    const oldImageUrlsInDB = oldProduct.images || [];
-
-    const urlsToDelete = oldImageUrlsInDB.filter(url => !currentImageUrls.includes(url));
-
-    if (urlsToDelete.length > 0) {
-      const pathsToDelete = urlsToDelete.map(url => {
-        const urlParts = url.split('/');
-        const bucketIndex = urlParts.indexOf('product-images');
-        if (bucketIndex > -1 && urlParts.length > bucketIndex + 1) {
-          return urlParts.slice(bucketIndex + 1).join('/');
-        }
-        return null;
-      }).filter(path => path !== null);
-
-      if (pathsToDelete.length > 0) {
-        const { error: deleteStorageError } = await supabase.storage
-          .from('product-images')
-          .remove(pathsToDelete);
-
-        if (deleteStorageError) {
-          console.warn('Advertencia: No se pudieron eliminar imágenes antiguas del storage:', deleteStorageError.message);
-        }
-      }
-    }
-
-    if (newFiles && newFiles.length > 0) {
-      for (const file of newFiles) {
-        const fileExtension = file.originalname.split('.').pop();
-        const fileName = `${uuidv4()}.${fileExtension}`;
-        const filePath = `product-images/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('product-images')
-          .upload(filePath, file.buffer, {
-            contentType: file.mimetype,
-            upsert: false,
-          });
-
-        if (uploadError) {
-          console.error('Error al subir nueva imagen a Supabase:', uploadError.message);
-          throw new Error('Error al subir una de las nuevas imágenes.');
-        }
-
-        const { data: publicUrlData } = supabase.storage
-          .from('product-images')
-          .getPublicUrl(filePath);
-
-        currentImageUrls.push(publicUrlData.publicUrl);
-      }
-    }
-
-    const { data, error: dbError } = await supabase
-      .from('products')
-      .update({
-        name,
-        description,
-        price: parseFloat(price),
-        category,
-        featured: featured === 'true',
-        active: active === 'true',
-        images: currentImageUrls,
-      })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (dbError) throw dbError;
-
-    res.status(200).json(data);
-  } catch (error) {
-    console.error('Error al actualizar producto:', error.message);
-    res.status(500).json({ error: error.message || 'Error interno del servidor al actualizar el producto.' });
-  }
-};
-
-// Eliminar un producto
-const deleteProduct = async (req, res) => {
-  const { id } = req.params;
-  try {
-    const { data: productToDelete, error: fetchError } = await supabase
-      .from('products')
-      .select('images')
-      .eq('id', id)
-      .single();
-
-    if (fetchError && fetchError.code === 'PGRST116') {
-      return res.status(404).json({ error: 'Producto no encontrado.' });
-    }
     if (fetchError) throw fetchError;
 
-    const imageUrls = productToDelete.images || [];
+    const oldImageUrls = currentProduct?.images || [];
+    const imagesToDelete = oldImageUrls.filter(url => !existingImageUrls.includes(url));
 
-    if (imageUrls.length > 0) {
-      const pathsToDelete = imageUrls.map(url => {
+    // Eliminar imágenes de Supabase Storage que ya no están en existingImages
+    if (imagesToDelete.length > 0) {
+      const pathsToDelete = imagesToDelete.map(url => {
         const urlParts = url.split('/');
         const bucketIndex = urlParts.indexOf('product-images');
         if (bucketIndex > -1 && urlParts.length > bucketIndex + 1) {
-          return urlParts.slice(bucketIndex + 1).join('/');
+            return urlParts.slice(bucketIndex + 1).join('/');
         }
         return null;
-      }).filter(path => path !== null);
+      }).filter(path => path !== null); // Filtrar nulos
 
       if (pathsToDelete.length > 0) {
         const { error: deleteStorageError } = await supabase.storage
@@ -270,19 +177,95 @@ const deleteProduct = async (req, res) => {
       }
     }
 
+    // Subir nuevas imágenes y añadirlas a las existentes
+    if (req.files && req.files.length > 0) {
+      const uploadPromises = req.files.map(async (file) => {
+        const fileExtension = file.originalname.split('.').pop();
+        const path = `${uuidv4()}.${fileExtension}`;
+        const { data, error } = await supabase.storage
+          .from('product-images')
+          .upload(path, file.buffer, {
+            contentType: file.mimetype,
+            upsert: false,
+          });
+
+        if (error) throw new Error(`Error al subir imagen ${file.originalname}: ${error.message}`);
+        const publicUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/product-images/${path}`;
+        return publicUrl;
+      });
+
+      const newImageUrls = await Promise.all(uploadPromises);
+      updatedProduct.images = [...existingImageUrls, ...newImageUrls];
+    } else {
+      updatedProduct.images = existingImageUrls;
+    }
+
+    const { data, error } = await supabase
+      .from('products')
+      .update(updatedProduct)
+      .eq('id', id)
+      .select();
+
+    if (error) throw error;
+    res.status(200).json(data[0]);
+  } catch (error) {
+    console.error('Error al actualizar producto:', error.message);
+    res.status(500).json({ error: 'Error interno del servidor al actualizar el producto.' });
+  }
+};
+
+// Eliminar un producto
+const deleteProduct = async (req, res) => {
+  const { id } = req.params;
+  try {
+    // Primero, obtener las URLs de las imágenes asociadas al producto
+    const { data: product, error: fetchProductError } = await supabase
+      .from('products')
+      .select('images')
+      .eq('id', id)
+      .single();
+
+    if (fetchProductError) throw fetchProductError;
+
+    // Eliminar las imágenes del storage de Supabase
+    if (product && product.images && product.images.length > 0) {
+        const pathsToDelete = product.images.map(url => {
+            // Extraer el path del archivo de la URL pública
+            const urlParts = url.split('/');
+            const bucketIndex = urlParts.indexOf('product-images');
+            if (bucketIndex > -1 && urlParts.length > bucketIndex + 1) {
+                return urlParts.slice(bucketIndex + 1).join('/');
+            }
+            return null; // En caso de que la URL no tenga el formato esperado
+        }).filter(path => path !== null); // Filtrar nulos
+
+        if (pathsToDelete.length > 0) {
+            const { error: deleteStorageError } = await supabase.storage
+                .from('product-images')
+                .remove(pathsToDelete);
+
+            if (deleteStorageError) {
+                console.warn('Advertencia: No se pudieron eliminar todas las imágenes del storage:', deleteStorageError.message);
+                // No detenemos la operación aquí, ya que el producto debe eliminarse de todos modos
+            }
+        }
+    }
+
+    // Luego, eliminar el producto de la base de datos
     const { error: deleteProductError } = await supabase
       .from('products')
       .delete()
       .eq('id', id);
 
     if (deleteProductError) throw deleteProductError;
-    res.status(204).send();
+    res.status(204).send(); // No Content
   } catch (error) {
     console.error('Error al eliminar producto:', error.message);
     res.status(500).json({ error: 'Error interno del servidor al eliminar el producto.' });
   }
 };
 
+// Exportar las funciones
 module.exports = {
   getProducts,
   getProductById,
