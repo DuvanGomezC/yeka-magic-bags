@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Label } from "@/components/ui/label"; // Label might not be strictly needed here, but keeping it if used elsewhere.
 import ProductCard from "./ProductCard";
 import {
   Select,
@@ -18,6 +18,14 @@ import { useQuery } from "@tanstack/react-query";
 import api from '../utils/axiosInstance';
 import { Product } from "@/types/product";
 
+// Definir el tipo de respuesta del backend para la paginación
+interface ProductsResponse {
+  products: Product[];
+  currentPage: number;
+  totalPages: number;
+  totalProducts: number;
+}
+
 export default function ProductList() {
   const [selectedCategory, setSelectedCategory] = useState<string>("todos");
   const [searchQuery, setSearchQuery] = useState("");
@@ -27,35 +35,50 @@ export default function ProductList() {
   const [currentPage, setCurrentPage] = useState(1);
 
   // Fetching de productos desde el backend con React Query
-  const fetchProducts = async (): Promise<Product[]> => {
-    const response = await api.get('/api/products');
+  // Se añaden los parámetros de búsqueda, categoría y paginación
+  const fetchProducts = async (): Promise<ProductsResponse> => {
+    const params = new URLSearchParams({
+      page: currentPage.toString(),
+      limit: PRODUCTS_PER_PAGE.toString(),
+    });
+
+    if (selectedCategory !== "todos") {
+      params.append("category", selectedCategory);
+    }
+    if (searchQuery) {
+      params.append("search", searchQuery);
+    }
+
+    const response = await api.get<ProductsResponse>(`/api/products?${params.toString()}`);
     return response.data;
   };
 
-  const { data: products, isLoading, isError, error } = useQuery<Product[]>({
-    queryKey: ['products'], // <-- Clave de la query, importante para invalidación
+  const { data, isLoading, isError, error, isPlaceholderData } = useQuery<
+    ProductsResponse,
+    Error // Assuming Error type for `error`
+  >({
+    queryKey: ['products', currentPage, selectedCategory, searchQuery],
     queryFn: fetchProducts,
+    // Use placeholderData instead of keepPreviousData for React Query v4+
+    placeholderData: (previousData) => previousData,
+    // `refetchOnWindowFocus: false` might be desired for better performance on large datasets
+    // refetchOnWindowFocus: false,
   });
 
-  const availableProducts = products ? products.filter(product => product.active) : [];
+  // Use optional chaining for `data` and provide default empty arrays/values
+  const products = data?.products || [];
+  const totalPages = data?.totalPages || 1;
+  const availableProducts = products.filter(product => product.active); // Solo mostrar productos activos en el frontend
 
-  const filteredProducts = availableProducts.filter((product) => {
-    const matchesCategory =
-      selectedCategory === "todos" || product.category === selectedCategory;
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          product.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
 
-  const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
-  const paginatedProducts = filteredProducts.slice(
-    (currentPage - 1) * PRODUCTS_PER_PAGE,
-    currentPage * PRODUCTS_PER_PAGE
-  );
+  // Por ahora, generamos desde los productos activos para tener algo.
+  const categories = Array.from(new Set(availableProducts.map((p) => p.category))) as string[];
+
 
   const goToPage = (page: number) => {
     setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' }); // Opcional: scroll a la parte superior al cambiar de página
+    // Optional: Scroll to top when changing page
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const goToNextPage = () => {
@@ -70,16 +93,13 @@ export default function ProductList() {
     }
   };
 
-  // Obtener categorías únicas
-  const categories = Array.from(new Set(availableProducts.map((p) => p.category)));
-
   // Resetear la página a 1 cuando cambian los filtros
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedCategory, searchQuery]);
 
 
-  if (isLoading) {
+  if (isLoading && !isPlaceholderData) { // Show loading only when no placeholder data is available
     return <div className="container mx-auto px-4 py-8 text-center">Cargando productos...</div>;
   }
 
@@ -88,7 +108,7 @@ export default function ProductList() {
   }
 
   return (
-    <section id="productos" className="container mx-auto px-4 py-8"> {/* <-- Añadir el ID aquí */}
+    <section id="productos" className="container mx-auto px-4 py-8">
       <h2 className="text-4xl font-serif font-extrabold text-center mb-10 text-magia-brown dark:text-gray-100 animate-fade-in-up">
         Nuestra Colección
       </h2>
@@ -115,9 +135,9 @@ export default function ProductList() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todas las categorías</SelectItem>
-              {categories.map((category) => (
+              {categories.map((category: string) => ( // Explicitly type category as string
                 <SelectItem key={category} value={category}>
-                  {category}
+                  {category} {/* Ensure category is treated as string */}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -127,8 +147,8 @@ export default function ProductList() {
 
       {/* Grid de productos */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {paginatedProducts.length > 0 ? (
-          paginatedProducts.map((product) => (
+        {products.length > 0 ? (
+          products.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))
         ) : (
@@ -158,6 +178,8 @@ export default function ProductList() {
               Anterior
             </Button>
             <div className="flex space-x-1">
+              {/* Renderizar solo un subconjunto de botones de página si hay muchas páginas,
+                  o ajustar el rango si es necesario para no renderizar demasiados botones */}
               {Array.from({ length: totalPages }, (_, index) => (
                 <Button
                   key={index + 1}
