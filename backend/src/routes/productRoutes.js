@@ -1,4 +1,3 @@
-// backend/src/routes/productRoutes.js
 const express = require('express');
 const {
   getProducts,
@@ -6,7 +5,6 @@ const {
   createProduct,
   updateProduct,
   deleteProduct,
-  getProductCategories, // <--- Importa esta nueva función aquí
 } = require('../controllers/productController');
 const { authenticateAdmin } = require('../middlewares/authMiddleware');
 const upload = require('../config/multerConfig'); // Importa la configuración de multer
@@ -14,12 +12,10 @@ const upload = require('../config/multerConfig'); // Importa la configuración d
 const router = express.Router();
 
 // --- RUTAS PÚBLICAS: NO requieren autenticación ---
-// Los clientes pueden ver todos los productos (con paginación, filtro y búsqueda)
+// Los clientes pueden ver todos los productos
 router.get('/', getProducts);
 // Los clientes pueden ver un producto por ID
 router.get('/:id', getProductById);
-// Nueva ruta pública para obtener categorías únicas
-router.get('/categories', getProductCategories); // <--- ¡AÑADE ESTA LÍNEA!
 
 // --- RUTAS PROTEGIDAS por el middleware de autenticación (solo para administradores) ---
 // Para la creación y actualización, usa upload.array('images', 5) para manejar múltiples imágenes
