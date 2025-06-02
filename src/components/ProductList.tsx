@@ -49,36 +49,46 @@ export default function ProductList() {
       params.append("search", searchQuery);
     }
 
+    // === CORRECCIÓN CLAVE AQUÍ: Siempre pedir productos activos ===
+    params.append("active", "true");
+
     const response = await api.get<ProductsResponse>(`/api/products?${params.toString()}`);
     return response.data;
   };
 
-  const { data, isLoading, isError, error, isPlaceholderData } = useQuery<
-    ProductsResponse,
-    Error // Assuming Error type for `error`
-  >({
-    queryKey: ['products', currentPage, selectedCategory, searchQuery],
+  const { data: productsData, isLoading, isError, error, isPlaceholderData } = useQuery<ProductsResponse, Error>({
+    queryKey: ['products', currentPage, selectedCategory, searchQuery], // Añadir filtros a la clave para re-fetch
     queryFn: fetchProducts,
-    // Use placeholderData instead of keepPreviousData for React Query v4+
-    placeholderData: (previousData) => previousData,
-    // `refetchOnWindowFocus: false` might be desired for better performance on large datasets
-    // refetchOnWindowFocus: false,
+    placeholderData: (previousData) => previousData, // Mantener datos previos mientras se carga la nueva página/filtros
   });
 
-  // Use optional chaining for `data` and provide default empty arrays/values
-  const products = data?.products || [];
-  const totalPages = data?.totalPages || 1;
-  const availableProducts = products.filter(product => product.active); // Solo mostrar productos activos en el frontend
+  // Los productos ya vienen filtrados por 'active' del backend
+  const products = productsData?.products || [];
+  const totalPages = productsData?.totalPages || 1;
+  const totalProducts = productsData?.totalProducts || 0;
 
 
-  // Por ahora, generamos desde los productos activos para tener algo.
-  const categories = Array.from(new Set(availableProducts.map((p) => p.category))) as string[];
+  // Filtrado adicional en el frontend (aunque el backend ya filtra por activo)
+  // Este filtro es para categoría y búsqueda. Los productos inactivos ya NO deberían llegar aquí.
+  const filteredProducts = products.filter((product) => {
+    const matchesCategory =
+      selectedCategory === "todos" || product.category === selectedCategory;
+    const matchesSearch =
+      searchQuery === "" ||
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (product.description &&
+        product.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesCategory && matchesSearch;
+  });
+
+  // Efecto para reiniciar la paginación cuando cambian los filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, searchQuery]);
 
 
   const goToPage = (page: number) => {
     setCurrentPage(page);
-    // Optional: Scroll to top when changing page
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const goToNextPage = () => {
@@ -93,62 +103,64 @@ export default function ProductList() {
     }
   };
 
-  // Resetear la página a 1 cuando cambian los filtros
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedCategory, searchQuery]);
-
-
-  if (isLoading && !isPlaceholderData) { // Show loading only when no placeholder data is available
-    return <div className="container mx-auto px-4 py-8 text-center">Cargando productos...</div>;
+  if (isLoading && !isPlaceholderData) {
+    return (
+      <section className="container mx-auto px-4 py-8">
+        <div className="text-center text-lg">Cargando productos...</div>
+      </section>
+    );
   }
 
   if (isError) {
-    return <div className="container mx-auto px-4 py-8 text-center text-red-500">Error al cargar los productos: {error?.message}</div>;
+    return (
+      <section className="container mx-auto px-4 py-8">
+        <div className="text-center text-red-500 text-lg">
+          Error al cargar productos: {error?.message}
+        </div>
+      </section>
+    );
   }
 
   return (
-    <section id="productos" className="container mx-auto px-4 py-8">
-      <h2 className="text-4xl font-serif font-extrabold text-center mb-10 text-magia-brown dark:text-gray-100 animate-fade-in-up">
-        Nuestra Colección
+    <section className="container mx-auto px-4 py-8">
+      <h2 className="text-4xl font-extrabold text-center text-magia-brown dark:text-gray-100 mb-8 animate-fade-in-up">
+        Nuestros Productos
       </h2>
-
-      {/* Controles de filtro y búsqueda */}
-      <div className="mb-8 flex flex-col md:flex-row gap-4 items-center justify-between p-4 bg-card rounded-lg shadow-sm border border-border">
-        {/* Búsqueda por nombre/descripción */}
+      <div className="flex flex-col md:flex-row gap-4 mb-8 items-center">
+        {/* Búsqueda */}
         <div className="relative w-full md:w-1/2">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            type="text"
-            placeholder="Buscar por nombre o descripción..."
+            placeholder="Buscar productos..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9"
+            className="pl-9 pr-4 py-2 w-full"
           />
         </div>
-
-        {/* Filtro por categoría */}
-        <div className="w-full md:w-1/3 lg:w-1/4">
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+        {/* Filtro de Categoría */}
+        <div className="w-full md:w-1/4">
+          <Select
+            value={selectedCategory}
+            onValueChange={setSelectedCategory}
+          >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Seleccionar Categoría" />
+              <SelectValue placeholder="Categoría" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todas las categorías</SelectItem>
-              {categories.map((category: string) => ( // Explicitly type category as string
-                <SelectItem key={category} value={category}>
-                  {category} {/* Ensure category is treated as string */}
-                </SelectItem>
-              ))}
+              {/* Aquí deberías cargar dinámicamente tus categorías reales */}
+              <SelectItem value="velas">Velas</SelectItem>
+              <SelectItem value="difusores">Difusores</SelectItem>
+              <SelectItem value="jabones">Jabones Artesanales</SelectItem>
+              <SelectItem value="accesorios">Accesorios</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      {/* Grid de productos */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {products.length > 0 ? (
-          products.map((product) => (
+        {filteredProducts.length > 0 ? (
+          filteredProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))
         ) : (
