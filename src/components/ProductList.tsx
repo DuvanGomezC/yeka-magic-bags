@@ -1,8 +1,8 @@
 // src/components/ProductList.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react"; // Importa useRef
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label"; // Label might not be strictly needed here, but keeping it if used elsewhere.
+import { Label } from "@/components/ui/label";
 import ProductCard from "./ProductCard";
 import {
   Select,
@@ -34,8 +34,10 @@ export default function ProductList() {
   const PRODUCTS_PER_PAGE = 8;
   const [currentPage, setCurrentPage] = useState(1);
 
+  // === AÑADIDO: Referencia para el scroll ===
+  const productListRef = useRef<HTMLDivElement>(null);
+
   // Fetching de productos desde el backend con React Query
-  // Se añaden los parámetros de búsqueda, categoría y paginación
   const fetchProducts = async (): Promise<ProductsResponse> => {
     const params = new URLSearchParams({
       page: currentPage.toString(),
@@ -49,27 +51,22 @@ export default function ProductList() {
       params.append("search", searchQuery);
     }
 
-    // === CORRECCIÓN CLAVE AQUÍ: Siempre pedir productos activos ===
-    params.append("active", "true");
+    params.append("active", "true"); // Siempre pedir productos activos para el cliente
 
     const response = await api.get<ProductsResponse>(`/api/products?${params.toString()}`);
     return response.data;
   };
 
   const { data: productsData, isLoading, isError, error, isPlaceholderData } = useQuery<ProductsResponse, Error>({
-    queryKey: ['products', currentPage, selectedCategory, searchQuery], // Añadir filtros a la clave para re-fetch
+    queryKey: ['products', currentPage, selectedCategory, searchQuery],
     queryFn: fetchProducts,
-    placeholderData: (previousData) => previousData, // Mantener datos previos mientras se carga la nueva página/filtros
+    placeholderData: (previousData) => previousData,
   });
 
-  // Los productos ya vienen filtrados por 'active' del backend
   const products = productsData?.products || [];
   const totalPages = productsData?.totalPages || 1;
   const totalProducts = productsData?.totalProducts || 0;
 
-
-  // Filtrado adicional en el frontend (aunque el backend ya filtra por activo)
-  // Este filtro es para categoría y búsqueda. Los productos inactivos ya NO deberían llegar aquí.
   const filteredProducts = products.filter((product) => {
     const matchesCategory =
       selectedCategory === "todos" || product.category === selectedCategory;
@@ -86,6 +83,14 @@ export default function ProductList() {
     setCurrentPage(1);
   }, [selectedCategory, searchQuery]);
 
+  // === AÑADIDO: Efecto para el scroll al cambiar de página o filtros ===
+  useEffect(() => {
+    if (productListRef.current) {
+      // Opciones de scroll: 'auto', 'smooth'
+      // 'start' o 'center' o 'end' para block
+      productListRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [currentPage, selectedCategory, searchQuery]); // Dependencias: cuando la página o filtros cambian
 
   const goToPage = (page: number) => {
     setCurrentPage(page);
@@ -122,7 +127,8 @@ export default function ProductList() {
   }
 
   return (
-    <section className="container mx-auto px-4 py-8">
+    // === AÑADIDO: Asigna la referencia al contenedor principal ===
+    <section ref={productListRef} id="products" className="container mx-auto px-4 py-8">
       <h2 className="text-4xl font-extrabold text-center text-magia-brown dark:text-gray-100 mb-8 animate-fade-in-up">
         Nuestros Productos
       </h2>
@@ -190,8 +196,6 @@ export default function ProductList() {
               Anterior
             </Button>
             <div className="flex space-x-1">
-              {/* Renderizar solo un subconjunto de botones de página si hay muchas páginas,
-                  o ajustar el rango si es necesario para no renderizar demasiados botones */}
               {Array.from({ length: totalPages }, (_, index) => (
                 <Button
                   key={index + 1}
