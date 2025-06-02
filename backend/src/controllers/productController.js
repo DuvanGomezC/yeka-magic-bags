@@ -1,20 +1,54 @@
 // backend/src/controllers/productController.js
-const supabase = require('../config/supabase');
+const { supabase } = require('../config/supabase'); // Asegúrate de que esta ruta sea correcta
 const { v4: uuidv4 } = require('uuid'); // Para generar IDs únicos para imágenes
 
-// Obtener todos los productos
+// Obtener todos los productos con paginación, filtro y búsqueda
 const getProducts = async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const page = parseInt(req.query.page) || 1; // Página actual, por defecto 1
+    const limit = parseInt(req.query.limit) || 8; // Productos por página, por defecto 8 (coincide con tu frontend)
+    const category = req.query.category; // Categoría para filtrar
+    const search = req.query.search; // Término de búsqueda
 
-    if (error) throw error;
-    res.status(200).json(data);
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit - 1; // Supabase usa rangos inclusivos
+
+    // Iniciar la consulta de Supabase. El 'count: 'exact'' es crucial para obtener el total de resultados.
+    let query = supabase
+      .from('products')
+      .select('*', { count: 'exact' }) // Solicitamos el conteo exacto de filas
+      .eq('active', true); // Siempre filtramos por productos activos
+
+    // Aplicar filtro de categoría si se proporciona y no es 'todos'
+    if (category && category !== 'todos') {
+      query = query.eq('category', category);
+    }
+
+    // Aplicar búsqueda si se proporciona un término
+    if (search) {
+      // Supabase usa `ilike` para búsquedas de texto insensibles a mayúsculas/minúsculas.
+      // Puedes combinar múltiples campos con `or`
+      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
+    }
+
+    // Aplicar ordenación (manteniendo tu orden original por 'created_at')
+    query = query.order('created_at', { ascending: false });
+
+    // Aplicar paginación (rango)
+    const { data: products, count: totalProducts, error } = await query
+      .range(startIndex, endIndex); // Rango de filas a obtener
+
+    if (error) {
+      console.error('Error al obtener productos desde Supabase:', error.message);
+      return res.status(500).json({ error: 'Error al obtener productos desde Supabase.', details: error.message });
+    }
+
+    // Devolvemos los productos de la página actual y el total de productos que coinciden con los filtros
+    res.status(200).json({ products, totalProducts });
+
   } catch (error) {
-    console.error('Error al obtener productos:', error.message);
-    res.status(500).json({ error: 'Error interno del servidor al obtener productos.' });
+    console.error('Error en el controlador getProducts:', error.message);
+    res.status(500).json({ error: 'Error interno del servidor al obtener productos.', details: error.message });
   }
 };
 
@@ -65,7 +99,7 @@ const createProduct = async (req, res) => {
           console.error('Error al subir imagen a Supabase:', uploadError.message);
           throw new Error('Error al subir una de las imágenes.'); // Detener si falla la subida
         }
-        
+
         // Obtener la URL pública de la imagen
         const { data: publicUrlData } = supabase.storage
           .from('product-images')
@@ -134,7 +168,7 @@ const updateProduct = async (req, res) => {
 
     // 3. Identificar imágenes a eliminar del Storage
     const urlsToDelete = oldImageUrlsInDB.filter(url => !currentImageUrls.includes(url));
-    
+
     if (urlsToDelete.length > 0) {
         const pathsToDelete = urlsToDelete.map(url => {
             const urlParts = url.split('/');
@@ -182,7 +216,7 @@ const updateProduct = async (req, res) => {
         const { data: publicUrlData } = supabase.storage
           .from('product-images')
           .getPublicUrl(filePath);
-          
+
         currentImageUrls.push(publicUrlData.publicUrl);
       }
     }
@@ -267,10 +301,33 @@ const deleteProduct = async (req, res) => {
   }
 };
 
+// Nueva función para obtener todas las categorías únicas
+const getProductCategories = async (req, res) => {
+  try {
+    // Obtenemos todas las categorías únicas de los productos activos
+    const { data, error } = await supabase
+      .from('products')
+      .select('category', { distinct: true }) // Selecciona solo la columna 'category' y obtiene valores únicos
+      .eq('active', true); // Solo categorías de productos activos
+
+    if (error) throw error;
+
+    // Extraer los valores de categoría de los objetos y filtrarlos si son nulos/vacíos
+    const categories = data.map(item => item.category).filter(Boolean); // .filter(Boolean) remueve nulos o vacíos
+
+    res.status(200).json(categories);
+  } catch (error) {
+    console.error('Error al obtener categorías de productos:', error.message);
+    res.status(500).json({ error: 'Error interno del servidor al obtener categorías.', details: error.message });
+  }
+};
+
+
 module.exports = {
   getProducts,
   getProductById,
   createProduct,
   updateProduct,
   deleteProduct,
+  getProductCategories, // ¡Exporta la nueva función!
 };
