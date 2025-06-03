@@ -29,6 +29,7 @@ interface ProductsResponse {
 export default function ProductList() {
   const [selectedCategory, setSelectedCategory] = useState<string>("todos");
   const [searchQuery, setSearchQuery] = useState("");
+  const [categories, setCategories] = useState<string[]>([]); // Nuevo estado para las categorías
 
   // --- Lógica de Paginación ---
   const PRODUCTS_PER_PAGE = 8;
@@ -40,7 +41,7 @@ export default function ProductList() {
   // Estado para controlar si es el primer render o cambio de página
   const [isPageChange, setIsPageChange] = useState(false);
 
-  // Fetching de productos desde el backend con React Query
+  // Fetching de productos desde el backend con React Query (para la lista principal)
   const fetchProducts = async (): Promise<ProductsResponse> => {
     const params = new URLSearchParams({
       page: currentPage.toString(),
@@ -70,16 +71,30 @@ export default function ProductList() {
   const totalPages = productsData?.totalPages || 1;
   const totalProducts = productsData?.totalProducts || 0;
 
-  const filteredProducts = products.filter((product) => {
-    const matchesCategory =
-      selectedCategory === "todos" || product.category === selectedCategory;
-    const matchesSearch =
-      searchQuery === "" ||
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (product.description &&
-        product.description.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesCategory && matchesSearch;
+  // --- NUEVA LÓGICA: Fetching de categorías únicas desde el backend ---
+  const fetchAllProductsForCategories = async (): Promise<Product[]> => {
+    // Fetches all active products without pagination to get all categories
+    // Se usa un límite muy alto para asegurar que se obtengan todos los productos activos
+    const response = await api.get<ProductsResponse>('/api/products?active=true&limit=9999');
+    return response.data.products;
+  };
+
+  const { data: allProductsForCategories, isLoading: isLoadingCategories, isError: isErrorCategories } = useQuery<Product[], Error>({
+    queryKey: ['allProductsForCategories'],
+    queryFn: fetchAllProductsForCategories,
+    staleTime: 1000 * 60 * 5, // Cache categories for 5 minutos para evitar re-fetch excesivo
   });
+
+  // Efecto para extraer y almacenar categorías únicas
+  useEffect(() => {
+    if (allProductsForCategories) {
+      const uniqueCategories = Array.from(
+        new Set(allProductsForCategories.map(p => p.category).filter(Boolean))
+      ) as string[]; // Filtra valores nulos/indefinidos y asegura el tipo string
+      setCategories(uniqueCategories);
+    }
+  }, [allProductsForCategories]);
+
 
   // Efecto para reiniciar la paginación cuando cambian los filtros
   useEffect(() => {
@@ -115,19 +130,20 @@ export default function ProductList() {
     }
   };
 
-  if (isLoading && !isPlaceholderData) {
+  // Manejo de estados de carga y error combinados
+  if (isLoading || isLoadingCategories) {
     return (
       <section className="container mx-auto px-4 py-8">
-        <div className="text-center text-lg">Cargando productos...</div>
+        <div className="text-center text-lg">Cargando productos y categorías...</div>
       </section>
     );
   }
 
-  if (isError) {
+  if (isError || isErrorCategories) {
     return (
       <section className="container mx-auto px-4 py-8">
         <div className="text-center text-red-500 text-lg">
-          Error al cargar productos: {error?.message}
+          Error al cargar datos: {error?.message || (isErrorCategories ? "Error al cargar categorías." : "Error desconocido.")}
         </div>
       </section>
     );
@@ -160,18 +176,19 @@ export default function ProductList() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todas las categorías</SelectItem>
-              <SelectItem value="velas">Velas</SelectItem>
-              <SelectItem value="difusores">Difusores</SelectItem>
-              <SelectItem value="jabones">Jabones Artesanales</SelectItem>
-              <SelectItem value="accesorios">Accesorios</SelectItem>
+              {categories.map((category) => (
+                <SelectItem key={category} value={category}>
+                  {category.charAt(0).toUpperCase() + category.slice(1)} {/* Capitaliza la primera letra */}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredProducts.length > 0 ? (
-          filteredProducts.map((product) => (
+        {products.length > 0 ? (
+          products.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))
         ) : (
