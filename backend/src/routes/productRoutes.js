@@ -5,9 +5,11 @@ const {
   createProduct,
   updateProduct,
   deleteProduct,
+  getCategories,
 } = require('../controllers/productController');
 const { authenticateAdmin } = require('../middlewares/authMiddleware');
 const upload = require('../config/multerConfig'); // Importa la configuración de multer
+
 
 const router = express.Router();
 
