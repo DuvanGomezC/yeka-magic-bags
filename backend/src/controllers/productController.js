@@ -56,6 +56,28 @@ const getProducts = async (req, res) => {
   }
 };
 
+// Obtener categorías únicas
+const getCategories = async (req, res) => {
+  try {
+    // Solo obtener categorías únicas de productos activos
+    const { data, error } = await supabase
+      .from('products')
+      .select('category')
+      .eq('active', true)
+      .not('category', 'is', null); // Excluir categorías nulas
+
+    if (error) throw error;
+
+    // Extraer categorías únicas
+    const uniqueCategories = [...new Set(data.map(item => item.category))];
+
+    res.status(200).json({ categories: uniqueCategories });
+  } catch (error) {
+    console.error('Error al obtener categorías:', error.message);
+    res.status(500).json({ error: 'Error interno del servidor al obtener categorías.' });
+  }
+};
+
 // Obtener un producto por ID
 const getProductById = async (req, res) => {
   const { id } = req.params;
@@ -272,4 +294,5 @@ module.exports = {
   createProduct,
   updateProduct,
   deleteProduct,
+  getCategories,
 };

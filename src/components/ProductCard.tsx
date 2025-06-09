@@ -18,6 +18,7 @@ interface ProductCardProps {
 export default function ProductCard({ product }: ProductCardProps) {
   const { addToCart } = useCart();
   const [currentImage, setCurrentImage] = useState(0);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   const nextImage = () => {
     if (product.images && product.images.length > 0) {
@@ -41,10 +42,22 @@ export default function ProductCard({ product }: ProductCardProps) {
       <Dialog>
         <DialogTrigger asChild>
           <div className="aspect-square overflow-hidden relative cursor-pointer">
+            {/* 🚀 OPTIMIZACIÓN: Lazy loading y skeleton */}
+            {!imageLoaded && (
+              <div className="absolute inset-0 bg-gray-200 dark:bg-gray-800 animate-pulse flex items-center justify-center">
+                <div className="text-gray-400 text-sm">Cargando...</div>
+              </div>
+            )}
             <img
               src={mainImage}
               alt={product.name}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              loading="lazy" // 🚀 Lazy loading nativo
+              decoding="async" // 🚀 Decodificación asíncrona
+              className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${
+                imageLoaded ? 'opacity-100' : 'opacity-0'
+              }`}
+              onLoad={() => setImageLoaded(true)}
+              onError={() => setImageLoaded(true)} // También mostrar si hay error
             />
             <div className="absolute inset-0 bg-black/5 group-hover:bg-black/0 transition-colors dark:bg-black/20 dark:group-hover:bg-black/10" />
           </div>
@@ -67,6 +80,8 @@ export default function ProductCard({ product }: ProductCardProps) {
                 <img
                   src={mainImage}
                   alt={product.name}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-contain"
                 />
 
@@ -116,6 +131,8 @@ export default function ProductCard({ product }: ProductCardProps) {
                       <img
                         src={image}
                         alt={`${product.name} - Imagen ${index + 1}`}
+                        loading="lazy"
+                        decoding="async"
                         className="h-full w-full object-cover"
                       />
                     </button>

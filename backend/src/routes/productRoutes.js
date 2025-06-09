@@ -22,5 +22,6 @@ router.get('/:id', getProductById);
 router.post('/', authenticateAdmin, upload.array('images', 5), createProduct); // 'images' es el nombre del campo en el formulario
 router.put('/:id', authenticateAdmin, upload.array('images', 5), updateProduct); // 'images' es el nombre del campo en el formulario
 router.delete('/:id', authenticateAdmin, deleteProduct);
+router.get('/categories', productController.getCategories);
 
 module.exports = router;

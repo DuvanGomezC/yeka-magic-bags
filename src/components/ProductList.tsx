@@ -1,4 +1,4 @@
-// src/components/ProductList.tsx
+// src/components/ProductList.tsx - VERSIÓN OPTIMIZADA
 import React, { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,10 +26,14 @@ interface ProductsResponse {
   totalProducts: number;
 }
 
+// Tipo para la respuesta de categorías
+interface CategoriesResponse {
+  categories: string[];
+}
+
 export default function ProductList() {
   const [selectedCategory, setSelectedCategory] = useState<string>("todos");
   const [searchQuery, setSearchQuery] = useState("");
-  const [categories, setCategories] = useState<string[]>([]); // Nuevo estado para las categorías
 
   // --- Lógica de Paginación ---
   const PRODUCTS_PER_PAGE = 8;
@@ -71,30 +75,18 @@ export default function ProductList() {
   const totalPages = productsData?.totalPages || 1;
   const totalProducts = productsData?.totalProducts || 0;
 
-  // --- NUEVA LÓGICA: Fetching de categorías únicas desde el backend ---
-  const fetchAllProductsForCategories = async (): Promise<Product[]> => {
-    // Fetches all active products without pagination to get all categories
-    // Se usa un límite muy alto para asegurar que se obtengan todos los productos activos
-    const response = await api.get<ProductsResponse>('/api/products?active=true&limit=9999');
-    return response.data.products;
+  // 🚀 OPTIMIZACIÓN: Fetching de categorías usando endpoint específico
+  const fetchCategories = async (): Promise<string[]> => {
+    const response = await api.get<CategoriesResponse>('/api/products/categories');
+    return response.data.categories;
   };
 
-  const { data: allProductsForCategories, isLoading: isLoadingCategories, isError: isErrorCategories } = useQuery<Product[], Error>({
-    queryKey: ['allProductsForCategories'],
-    queryFn: fetchAllProductsForCategories,
-    staleTime: 1000 * 60 * 5, // Cache categories for 5 minutos para evitar re-fetch excesivo
+  const { data: categories = [], isLoading: isLoadingCategories, isError: isErrorCategories } = useQuery<string[], Error>({
+    queryKey: ['categories'],
+    queryFn: fetchCategories,
+    staleTime: 1000 * 60 * 10, // Cache categories for 10 minutos
+    gcTime: 1000 * 60 * 30, // Keep in cache for 30 minutes
   });
-
-  // Efecto para extraer y almacenar categorías únicas
-  useEffect(() => {
-    if (allProductsForCategories) {
-      const uniqueCategories = Array.from(
-        new Set(allProductsForCategories.map(p => p.category).filter(Boolean))
-      ) as string[]; // Filtra valores nulos/indefinidos y asegura el tipo string
-      setCategories(uniqueCategories);
-    }
-  }, [allProductsForCategories]);
-
 
   // Efecto para reiniciar la paginación cuando cambian los filtros
   useEffect(() => {
@@ -134,7 +126,7 @@ export default function ProductList() {
   if (isLoading || isLoadingCategories) {
     return (
       <section className="container mx-auto px-4 py-8">
-        <div className="text-center text-lg">Cargando productos y categorías...</div>
+        <div className="text-center text-lg">Cargando productos...</div>
       </section>
     );
   }
