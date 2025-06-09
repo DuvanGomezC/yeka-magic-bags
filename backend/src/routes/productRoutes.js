@@ -16,6 +16,8 @@ const router = express.Router();
 // --- RUTAS PÚBLICAS: NO requieren autenticación ---
 // Los clientes pueden ver todos los productos
 router.get('/', getProducts);
+// Los clientes pueden ver las categorías
+router.get('/categories', getCategories); // ← MOVIDO AQUÍ para evitar conflicto con /:id
 // Los clientes pueden ver un producto por ID
 router.get('/:id', getProductById);
 
@@ -24,6 +26,5 @@ router.get('/:id', getProductById);
 router.post('/', authenticateAdmin, upload.array('images', 5), createProduct); // 'images' es el nombre del campo en el formulario
 router.put('/:id', authenticateAdmin, upload.array('images', 5), updateProduct); // 'images' es el nombre del campo en el formulario
 router.delete('/:id', authenticateAdmin, deleteProduct);
-router.get('/categories', productController.getCategories);
 
 module.exports = router;
